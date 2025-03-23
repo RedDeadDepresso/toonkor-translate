@@ -1,7 +1,7 @@
 # Comic Translate
 English | [한국어](docs/README_ko.md) | [Français](docs/README_fr.md) | [简体中文](docs/README_zh-CN.md) | [日本語](docs/README_ja.md) | [Português Brasileiro](docs/README_pt-BR.md)
 
-<img src="https://i.imgur.com/aNuwiJb.png">
+<img src="https://i.imgur.com/QUVK6mK.png">
 
 ## Intro
 Many Automatic Manga Translators exist. Very few properly support comics of other kinds in other languages. 
@@ -68,55 +68,48 @@ Note: Some of these also have Official English Translations
 
 ## Installation
 ### Python
-Install Python (<=3.10). Tick "Add python.exe to PATH" during the setup.
+Install Python 3.12. Tick "Add python.exe to PATH" during the setup.
 ```bash
 https://www.python.org/downloads/
 ```
+Install git
+```bash
+https://git-scm.com/
+```
+Install uv
+```
+https://docs.astral.sh/uv/getting-started/installation/
+```
 
-Clone the repo (or download the folder), navigate to the folder
+Then, in the command line
 ```bash
 git clone https://github.com/ogkalu2/comic-translate
 cd comic-translate
+uv init --python 3.12
 ```
 and install the requirements
 ```bash
-pip install -r requirements.txt
-```
-If you run into any issues, you can try running it in a virtual environment.
-Open the terminal/cmd in whatever directory you want the virtual environment installed (or cd 'path/to/virtual environment/folder').
-Create your virtual environment with:
-```bash
-python -m venv comic-translate-venv
+uv add -r requirements.txt --compile-bytecode
 ```
 
-Now activate the virtual environment. On Windows:
+To Update, run this in the comic-translate folder
 ```bash
-comic-translate-venv\Scripts\activate
+git pull
+uv init --python 3.12 (Note: only run this line if you did not use uv for the first time installation)
+uv add -r requirements.txt --compile-bytecode
 ```
-
-On Mac and Linux:
-```bash
-source comic-translate-venv/bin/activate
-```
-
-Now you can run the Installation Commands again. When you are finished using the app, you can deactivate the virtul environment with:
-```bash
-deactivate
-```
-To re-activate, use the same commands with the terminal in the folder your virtual environment folder is located in.
 
 If you have an NVIDIA GPU, then it is recommended to run
 ```bash
-pip uninstall torch torchvision
-pip install torch==2.1.0+cu121 -f https://download.pytorch.org/whl/torch_stable.html
-pip install torchvision==0.16.0+cu121 -f https://download.pytorch.org/whl/torch_stable.html
+uv remove torch torchvision
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```
-Note: The 121 in +cu121 represents the CUDA version - 12.1. Replace 121 with your CUDA version. E.g 118 if you are running CUDA 11.8
+Note: The 121 in cu121 represents the CUDA version - 12.1. Replace 121 with your CUDA version. E.g 118 if you are running CUDA 11.8
 
 ## Usage
 In the comic-translate directory, run
 ```bash
-python comic.py
+uv run comic.py
 ```
 This will launch the GUI
 
@@ -163,11 +156,11 @@ You can set your API Keys by going to Settings > Credentials
 
 ### OCR
 By Default:
-* [EasyOCR](https://github.com/JaidedAI/EasyOCR) for English
+* [doctr](https://github.com/mindee/doctr) for English, French, German, Dutch, Spanish and Italian.
 * [manga-ocr](https://github.com/kha-white/manga-ocr) for Japanese
 * [Pororo](https://github.com/yunwoong7/korean_ocr_using_pororo) for Korean 
 * [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) for Chinese 
-* [GPT-4o](https://platform.openai.com/docs/guides/vision) for French, Russian, German, Dutch, Spanish and Italian. Paid, Requires an API Key.
+* [GPT-4o](https://platform.openai.com/docs/guides/vision) for Russian. Paid, Requires an API Key.
 
 Optional:
 
@@ -200,5 +193,6 @@ PIL for rendering wrapped text in bounding boxes obtained from bubbles and text.
 * [https://github.com/kha-white/manga-ocr](https://github.com/kha-white/manga-ocr)
 * [https://github.com/JaidedAI/EasyOCR](https://github.com/JaidedAI/EasyOCR)
 * [https://github.com/PaddlePaddle/PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)
+* [https://github.com/phenom-films/dayu_widgets](https://github.com/phenom-films/dayu_widgets)
 
 

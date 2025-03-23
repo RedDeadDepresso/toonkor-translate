@@ -2,31 +2,26 @@ import cv2
 import base64
 import json
 import re
-import stanza
 import numpy as np
-from openai import OpenAI
-import google.generativeai as genai
-import anthropic
 from .textblock import TextBlock
 from typing import List
 
 
+MODEL_MAP = {
+    "Custom": "",  
+    "Deepseek-v3": "deepseek-chat", 
+    "GPT-4o": "gpt-4o",
+    "GPT-4o mini": "gpt-4o-mini",
+    "Claude-3-Opus": "claude-3-opus-20240229",
+    "Claude-3.7-Sonnet": "claude-3-7-sonnet-20250219",
+    "Claude-3.5-Haiku": "claude-3-5-haiku-20241022",
+    "Gemini-2.0-Flash": "gemini-2.0-flash",
+    "Gemini-2.0-Pro": "gemini-2.0-pro-exp-02-05"
+}
+
 def encode_image_array(img_array: np.ndarray):
     _, img_bytes = cv2.imencode('.png', img_array)
     return base64.b64encode(img_bytes).decode('utf-8')
-
-def get_llm_client(translator: str, api_key: str):
-    if 'GPT' in translator:
-        client  = OpenAI(api_key = api_key)
-    elif 'Claude' in translator:
-        client = anthropic.Anthropic(api_key = api_key)
-    elif 'Gemini' in translator:
-        client = genai
-        client.configure(api_key = api_key)
-    else:
-        client = None
-
-    return client
 
 def get_raw_text(blk_list: List[TextBlock]):
     rw_txts_dict = {}
@@ -64,10 +59,24 @@ def set_texts_from_json(blk_list: List[TextBlock], json_string: str):
     else:
         print("No JSON found in the input string.")
 
+def set_upper_case(blk_list: List[TextBlock], upper_case: bool):
+    for blk in blk_list:
+        translation = blk.translation
+        if translation is None:
+            continue
+        if upper_case and not translation.isupper():
+            blk.translation = translation.upper() 
+        elif not upper_case and translation.isupper():
+            blk.translation = translation.capitalize()
+        else:
+            blk.translation = translation
+
 def format_translations(blk_list: List[TextBlock], trg_lng_cd: str, upper_case: bool =True):
     for blk in blk_list:
         translation = blk.translation
-        if any(lang in trg_lng_cd.lower() for lang in ['zh', 'ja']):
+        if any(lang in trg_lng_cd.lower() for lang in ['zh', 'ja', 'th']):
+
+            import stanza
 
             if trg_lng_cd == 'zh-TW':
                 trg_lng_cd = 'zh-Hant'
@@ -86,12 +95,7 @@ def format_translations(blk_list: List[TextBlock], trg_lng_cd: str, upper_case: 
             translation = ''.join(word if word in ['.', ','] else f' {word}' for word in seg_result).lstrip()
             blk.translation = translation
         else:
-            if upper_case and not translation.isupper():
-                blk.translation = translation.upper() 
-            elif not upper_case and translation.isupper():
-                blk.translation = translation.capitalize()
-            else:
-                blk.translation = translation
+            set_upper_case(blk_list, upper_case)
 
 def is_there_text(blk_list: List[TextBlock]) -> bool:
     return any(blk.text for blk in blk_list)

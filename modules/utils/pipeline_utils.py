@@ -2,12 +2,15 @@ import cv2
 import numpy as np
 import os
 import base64
+
 from .textblock import TextBlock, sort_textblock_rectangles
-from ..detection import does_rectangle_fit, do_rectangles_overlap, is_mostly_contained
-from typing import List
+from ..detection.utils.general import does_rectangle_fit, is_mostly_contained
 from ..inpainting.lama import LaMa
+from ..inpainting.mi_gan import MIGAN
+from ..inpainting.aot import AOT
 from ..inpainting.schema import Config
 from app.ui.messages import Messages
+from PySide6.QtCore import Qt
 
 
 language_codes = {
@@ -27,11 +30,22 @@ language_codes = {
     "Polish": "pl",
     "Portuguese": "pt",
     "Brazilian Portuguese": "pt-br",
+    "Thai": "th",
+    "Vietnamese": "vi",
+    "Indonesian": "id",
+    "Hungarian": "hu",
+    "Finnish": "fi",
+    "Arabic": "ar",
     }
+
+def get_layout_direction(language: str) -> Qt.LayoutDirection:
+    return Qt.LayoutDirection.RightToLeft if language == 'Arabic' else Qt.LayoutDirection.LeftToRight
 
 
 inpaint_map = {
-    "LaMa": LaMa
+    "LaMa": LaMa,
+    "MI-GAN": MIGAN,
+    "AOT": AOT,
 }
 
 def get_config(settings_page):
@@ -58,7 +72,7 @@ def encode_image_array(img_array: np.ndarray):
     _, img_bytes = cv2.imencode('.png', img_array)
     return base64.b64encode(img_bytes).decode('utf-8')
 
-def lists_to_blk_list(blk_list: List[TextBlock], texts_bboxes: List, texts_string: List):
+def lists_to_blk_list(blk_list: list[TextBlock], texts_bboxes: list, texts_string: list):  
     group = list(zip(texts_bboxes, texts_string))  
 
     for blk in blk_list:
@@ -85,12 +99,14 @@ def lists_to_blk_list(blk_list: List[TextBlock], texts_bboxes: List, texts_strin
 
     return blk_list
 
-def generate_mask(img: np.ndarray, blk_list: List[TextBlock], default_padding: int = 5) -> np.ndarray:
+def generate_mask(img: np.ndarray, blk_list: list[TextBlock], default_padding: int = 5) -> np.ndarray:
     h, w, c = img.shape
     mask = np.zeros((h, w), dtype=np.uint8)  # Start with a black mask
     
     for blk in blk_list:
         bboxes = blk.inpaint_bboxes
+        if bboxes is None or len(bboxes) == 0:
+            continue
         for bbox in bboxes:
             x1, y1, x2, y2 = bbox
             
@@ -98,7 +114,7 @@ def generate_mask(img: np.ndarray, blk_list: List[TextBlock], default_padding: i
             kernel_size = default_padding
             if hasattr(blk, 'source_lang') and blk.source_lang not in ['ja', 'ko']:
                 kernel_size = 3
-            if hasattr(blk, 'text_class') and blk.text_class == 'text_bubble':
+            if blk.text_class == 'text_bubble' and blk.bubble_xyxy is not None:
                 # Calculate the minimal distance from the mask to the bounding box edges
                 min_distance_to_bbox = min(
                     x1 - blk.bubble_xyxy[0],  # left side
@@ -126,31 +142,39 @@ def generate_mask(img: np.ndarray, blk_list: List[TextBlock], default_padding: i
     return mask
 
 def validate_ocr(main_page, source_lang):
-
     settings_page = main_page.settings_page
+    tr = settings_page.ui.tr
     settings = settings_page.get_all_settings()
-
+    credentials = settings.get('credentials', {})
     source_lang_en = main_page.lang_mapping.get(source_lang, source_lang)
-
     ocr_tool = settings['tools']['ocr']
-
+    
     # Validate OCR API keys
-    if ocr_tool == settings_page.ui.tr("Microsoft OCR") and not settings["credentials"]["Microsoft Azure"]["api_key_ocr"]:
+    if (ocr_tool == tr("Microsoft OCR") and 
+        not credentials.get(tr("Microsoft Azure"), {}).get("api_key_ocr")):
         Messages.show_api_key_ocr_error(main_page)
         return False
     
-    if ocr_tool == settings_page.ui.tr("Google Cloud Vision") and not settings["credentials"]["Google Cloud"]["api_key"]:
+    if (ocr_tool == tr("Google Cloud Vision") and 
+        not credentials.get(tr("Google Cloud"), {}).get("api_key")):
         Messages.show_api_key_ocr_error(main_page)
         return False
-
+        
     # Validate Microsoft Endpoint
-    if ocr_tool == settings_page.ui.tr('Microsoft OCR') and not settings['credentials']['Microsoft Azure']['endpoint']:
+    if (ocr_tool == tr('Microsoft OCR') and 
+        not credentials.get(tr('Microsoft Azure'), {}).get('endpoint')):
         Messages.show_endpoint_url_error(main_page)
         return False
-
+        
     # Validate GPT OCR
-    if source_lang_en in ["French", "German", "Dutch", "Russian", "Spanish", "Italian"]:
-        if ocr_tool == settings_page.ui.tr('Default') and not settings['credentials']['Open AI GPT']['api_key']:
+    if (ocr_tool == tr('GPT-4o') and 
+        not credentials.get(tr('Open AI GPT'), {}).get('api_key')):
+        Messages.show_api_key_ocr_error(main_page)
+        return False
+    
+    if source_lang_en == "Russian":
+        if (ocr_tool == tr('Default') and 
+            not credentials.get(tr('Open AI GPT'), {}).get('api_key')):
             Messages.show_api_key_ocr_gpt4v_error(main_page)
             return False
     
@@ -158,48 +182,64 @@ def validate_ocr(main_page, source_lang):
 
 def validate_translator(main_page, source_lang, target_lang):
     settings_page = main_page.settings_page
+    tr = settings_page.ui.tr
     settings = settings_page.get_all_settings()
-
+    credentials = settings.get('credentials', {})
     translator_tool = settings['tools']['translator']
-
+    
     # Validate translator API keys
-    if translator_tool == settings_page.ui.tr("DeepL") and not settings["credentials"]["DeepL"]["api_key"]:
+    if (translator_tool == tr("DeepL") and 
+        not credentials.get(tr("DeepL"), {}).get("api_key")):
         Messages.show_api_key_translator_error(main_page)
         return False
     
-    if translator_tool == settings_page.ui.tr("Microsoft Translator") and not settings["credentials"]["Microsoft Azure"]["api_key_translator"]:
+    if (translator_tool == tr("Microsoft Translator") and 
+        not credentials.get(tr("Microsoft Azure"), {}).get("api_key_translator")):
         Messages.show_api_key_translator_error(main_page)
         return False
-
-    if translator_tool == settings_page.ui.tr("Yandex") and not settings["credentials"]["Yandex"]["api_key"]:
-        Messages.show_api_key_translator_error(main_page)
-        return False
-    
-    if 'GPT' in translator_tool and not settings['credentials']['Open AI GPT']['api_key']:
-        Messages.show_api_key_translator_error(main_page)
-        return False
-    if 'Gemini' in translator_tool and not settings['credentials']['Google Gemini']['api_key']:
-        Messages.show_api_key_translator_error(main_page)
-        return False
-    if 'Claude' in translator_tool and not settings['credentials']['Anthropic Claude']['api_key']:
-        Messages.show_api_key_translator_error(main_page)
-        return False
-    
-    # Check DeepL and Traditional Chinese incompatibility
-    if translator_tool == 'DeepL' and target_lang == main_page.tr('Traditional Chinese'):
-        Messages.show_deepl_ch_error(main_page)
-        return False
-
-    # Add Google Translate and Brazilian Portuguese incompatibility check
-    if translator_tool == 'Google Translate':
-        if source_lang == main_page.tr('Brazilian Portuguese') or target_lang == main_page.tr('Brazilian Portuguese'):
-            Messages.show_googlet_ptbr_error(main_page)
-            return False
         
-    return True  
+    if (translator_tool == tr("Yandex") and 
+        not credentials.get(tr("Yandex"), {}).get("api_key")):
+        Messages.show_api_key_translator_error(main_page)
+        return False
+    
+    if ('GPT' in translator_tool and 
+        not credentials.get(tr('Open AI GPT'), {}).get('api_key')):
+        Messages.show_api_key_translator_error(main_page)
+        return False
+        
+    if ('Gemini' in translator_tool and 
+        not credentials.get(tr('Google Gemini'), {}).get('api_key')):
+        Messages.show_api_key_translator_error(main_page)
+        return False
+        
+    if ('Claude' in translator_tool and 
+        not credentials.get(tr('Anthropic Claude'), {}).get('api_key')):
+        Messages.show_api_key_translator_error(main_page)
+        return False
+    
+    # Check service-specific incompatibilities
+    if translator_tool == tr('DeepL'):
+        if target_lang == main_page.tr('Traditional Chinese'):
+            Messages.show_deepl_ch_error(main_page)
+            return False
+        if target_lang == main_page.tr('Thai'):
+            Messages.show_deepl_th_error(main_page)
+            return False
+        if target_lang == main_page.tr('Vietnamese'):
+            Messages.show_deepl_vi_error(main_page)
+            return False
+            
+    if  translator_tool == tr('Google Translate'):
+            if (source_lang == main_page.tr('Brazilian Portuguese') or 
+                target_lang == main_page.tr('Brazilian Portuguese')):
+                Messages.show_googlet_ptbr_error(main_page)
+                return False
+    
+    return True
 
 def font_selected(main_page):
-    if not main_page.settings_page.get_text_rendering_settings()['font']:
+    if not main_page.render_settings().font_family:
         Messages.select_font_error(main_page)
         return False
     return True
@@ -213,17 +253,6 @@ def validate_settings(main_page, source_lang, target_lang):
         return False
     
     return True
-
-def set_alignment(blk_list, settings_page):
-    text_render_settings = settings_page.get_text_rendering_settings()
-    for blk in blk_list:
-        alignment = text_render_settings['alignment']
-        if alignment == settings_page.ui.tr("Center"):
-            blk.alignment = "center"
-        elif alignment == settings_page.ui.tr("Left"):
-            blk.alignment = "left"
-        elif alignment == settings_page.ui.tr("Right"):
-            blk.alignment = "right"
 
 def is_directory_empty(directory):
     # Walk through the directory
@@ -239,19 +268,3 @@ def is_directory_empty(directory):
                 if not is_directory_empty(os.path.join(root, dir)):
                     return False
     return True
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-

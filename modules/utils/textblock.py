@@ -7,12 +7,14 @@ class TextBlock(object):
     Object that stores a block of text. Optionally stores the list of lines
     """
     def __init__(self, 
-                 text_bbox: np.ndarray,
+                 text_bbox: np.ndarray = None,
                  bubble_bbox: np.ndarray = None,
                  text_class: str = "",
-                 inpaint_bboxes: List = None,
+                 inpaint_bboxes = None,
                  lines: List = None,
                  text_segm_points: np.ndarray = None, 
+                 angle = 0,
+                 text: str = "",
                  texts: List[str] = None,
                  translation: str = "",
                  line_spacing = 1,
@@ -28,11 +30,16 @@ class TextBlock(object):
         self.segm_pts = text_segm_points
         self.bubble_xyxy = bubble_bbox
         self.text_class = text_class
+        self.angle = angle
+        self.tr_origin_point = ()
  
         self.lines = lines
-        self.inpaint_bboxes = inpaint_bboxes
+        if isinstance(inpaint_bboxes, np.ndarray):
+            self.inpaint_bboxes = inpaint_bboxes
+        else:
+            self.inpaint_bboxes = np.array(inpaint_bboxes, dtype=np.int32) if inpaint_bboxes else None
         self.texts = texts if texts is not None else []
-        self.text = ' '.join(self.texts) 
+        self.text = ' '.join(self.texts) if self.texts else text
         self.translation = translation
 
         self.line_spacing = line_spacing
@@ -223,3 +230,4 @@ def adjust_blks_size(blk_list: List[TextBlock], img: np.ndarray, w_expan: int = 
         coords = blk.xyxy
         expanded_coords = adjust_text_line_coordinates(coords, w_expan, h_expan, img)
         blk.xyxy[:] = expanded_coords
+

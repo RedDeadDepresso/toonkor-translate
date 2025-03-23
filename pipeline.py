@@ -1,21 +1,23 @@
-import os
+import os, json
 import cv2, shutil
 from datetime import datetime
 from typing import List
 from PySide6 import QtCore
+from PySide6.QtGui import QColor
 
-from modules.detection import TextBlockDetector
-from modules.ocr.ocr import OCRProcessor
-from modules.translator import Translator
+from modules.detection.processor import TextBlockDetector
+from modules.ocr.processor import OCRProcessor
+from modules.translation.processor import Translator
 from modules.utils.textblock import TextBlock, sort_blk_list
-from modules.rendering.render import get_best_render_area
 from modules.utils.pipeline_utils import inpaint_map, get_config
-from modules.rendering.render import draw_text, get_best_render_area
-from modules.utils.pipeline_utils import generate_mask, get_language_code, set_alignment, is_directory_empty
-from modules.utils.translator_utils import get_raw_translation, get_raw_text, format_translations
+from modules.rendering.render import get_best_render_area, pyside_word_wrap
+from modules.utils.pipeline_utils import generate_mask, get_language_code, is_directory_empty
+from modules.utils.translator_utils import get_raw_translation, get_raw_text, format_translations, set_upper_case
 from modules.utils.archives import make
 
-from app.ui.canvas.rectangle import MovableRectItem
+from app.ui.canvas.rectangle import MoveableRectItem
+from app.ui.canvas.text_item import OutlineInfo, OutlineType
+from app.ui.canvas.save_renderer import ImageSaveRenderer
 
 class ComicTranslatePipeline:
     def __init__(self, main_page):
@@ -30,10 +32,14 @@ class ComicTranslatePipeline:
         if self.main_page.image_viewer.hasPhoto() and blk_list:
             for blk in blk_list:
                 x1, y1, x2, y2 = blk.xyxy
-                rect = QtCore.QRectF(x1, y1, x2 - x1, y2 - y1)
-                rect_item = MovableRectItem(rect, self.main_page.image_viewer._photo)
-                rect_item.signals.rectangle_changed.connect(self.main_page.handle_rectangle_change)
-                self.main_page.image_viewer._rectangles.append(rect_item)
+                rect = QtCore.QRectF(0, 0, x2 - x1, y2 - y1)
+                rect_item = MoveableRectItem(rect, self.main_page.image_viewer.photo)
+                if blk.tr_origin_point:
+                    rect_item.setTransformOriginPoint(QtCore.QPointF(*blk.tr_origin_point))
+                rect_item.setPos(x1,y1)
+                rect_item.setRotation(blk.angle)
+                self.main_page.connect_rect_item_signals(rect_item)
+                self.main_page.image_viewer.rectangles.append(rect_item)
 
             rect = self.main_page.find_corresponding_rect(self.main_page.blk_list[0], 0.5)
             self.main_page.image_viewer.select_rectangle(rect)
@@ -42,10 +48,7 @@ class ComicTranslatePipeline:
     def detect_blocks(self, load_rects=True):
         if self.main_page.image_viewer.hasPhoto():
             if self.block_detector_cache is None:
-                device = 0 if self.main_page.settings_page.is_gpu_enabled() else 'cpu'
-                self.block_detector_cache = TextBlockDetector('models/detection/comic-speech-bubble-detector.pt', 
-                                                'models/detection/comic-text-segmenter.pt','models/detection/manga-text-detector.pt',
-                                                 device)
+                self.block_detector_cache = TextBlockDetector(self.main_page.settings_page)
             image = self.main_page.image_viewer.get_cv2_image()
             blk_list = self.block_detector_cache.detect(image)
 
@@ -90,27 +93,27 @@ class ComicTranslatePipeline:
         image = self.main_page.image_viewer.get_cv2_image()
         inpainted = self.manual_inpaint()
         return inpainted, image
+    
+    def get_selected_block(self):
+        rect = self.main_page.image_viewer.selected_rect
+        srect = rect.mapRectToScene(rect.rect())
+        srect_coords = srect.getCoords()
+        blk = self.main_page.find_corresponding_text_block(srect_coords)
+        return blk
 
-    def inpaint_and_set(self):
-        if self.main_page.image_viewer.hasPhoto() and self.main_page.image_viewer.has_drawn_elements():
-            image = self.main_page.image_viewer.get_cv2_image()
-
-            inpainted = self.manual_inpaint()
-            self.main_page.set_cv2_image(inpainted)
-
-            get_best_render_area(self.main_page.blk_list, image, inpainted)
-            self.load_box_coords(self.main_page.blk_list)
-
-    def OCR_image(self):
+    def OCR_image(self, single_block=False):
         source_lang = self.main_page.s_combo.currentText()
-        if self.main_page.image_viewer.hasPhoto() and self.main_page.image_viewer._rectangles:
+        if self.main_page.image_viewer.hasPhoto() and self.main_page.image_viewer.rectangles:
             image = self.main_page.image_viewer.get_cv2_image()
-            # Print block length
-            print("Block Length: ", len(self.main_page.blk_list))
             self.ocr.initialize(self.main_page, source_lang)
-            self.ocr.process(image, self.main_page.blk_list)
+            if single_block:
+                blk = self.get_selected_block()
+                self.ocr.process(image, [blk])
+            else:
+                self.ocr.process(image, self.main_page.blk_list)
+                print("Block Length: ", len(self.main_page.blk_list))
 
-    def translate_image(self):
+    def translate_image(self, single_block=False):
         source_lang = self.main_page.s_combo.currentText()
         target_lang = self.main_page.t_combo.currentText()
         if self.main_page.image_viewer.hasPhoto() and self.main_page.blk_list:
@@ -118,21 +121,22 @@ class ComicTranslatePipeline:
             image = self.main_page.image_viewer.get_cv2_image()
             extra_context = settings_page.get_llm_settings()['extra_context']
 
-            translator = Translator(self.main_page, source_lang, target_lang)
-            translator.translate(self.main_page.blk_list, image, extra_context)
+            upper_case = settings_page.ui.uppercase_checkbox.isChecked()
 
-            target_lang_en = self.main_page.lang_mapping.get(target_lang, None)
-            trg_lng_cd = get_language_code(target_lang_en)
-            text_rendering_settings = settings_page.get_text_rendering_settings()
-            upper_case = text_rendering_settings['upper_case']
-            format_translations(self.main_page.blk_list, trg_lng_cd, upper_case=upper_case)
+            translator = Translator(self.main_page, source_lang, target_lang)
+            if single_block:
+                blk = self.get_selected_block()
+                translator.translate([blk], image, extra_context)
+                set_upper_case([blk], upper_case)
+            else:
+                translator.translate(self.main_page.blk_list, image, extra_context)
+                set_upper_case(self.main_page.blk_list, upper_case)
 
     def skip_save(self, directory, timestamp, base_name, extension, archive_bname, image):
         path = os.path.join(directory, f"comic_translate_{timestamp}", "translated_images", archive_bname)
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
-        image_save = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        cv2.imwrite(os.path.join(path, f"{base_name}_translated{extension}"), image_save)
+        cv2.imwrite(os.path.join(path, f"{base_name}_translated{extension}"), image)
 
     def log_skipped_image(self, directory, timestamp, image_path):
         with open(os.path.join(directory, f"comic_translate_{timestamp}", "skipped_images.txt"), 'a', encoding='UTF-8') as file:
@@ -177,10 +181,7 @@ class ComicTranslatePipeline:
                 break
 
             if self.block_detector_cache is None:
-                bdetect_device = 0 if self.main_page.settings_page.is_gpu_enabled() else 'cpu'
-                self.block_detector_cache = TextBlockDetector('models/detection/comic-speech-bubble-detector.pt', 
-                                                            'models/detection/comic-text-segmenter.pt', 'models/detection/manga-text-detector.pt', 
-                                                            bdetect_device)
+                self.block_detector_cache = TextBlockDetector(self.main_page.settings_page)
             
             blk_list = self.block_detector_cache.detect(image)
 
@@ -193,6 +194,9 @@ class ComicTranslatePipeline:
                 self.ocr.initialize(self.main_page, source_lang)
                 try:
                     self.ocr.process(image, blk_list)
+                    source_lang_english = self.main_page.lang_mapping.get(source_lang, source_lang)
+                    rtl = True if source_lang_english == 'Japanese' else False
+                    blk_list = sort_blk_list(blk_list, rtl)
                 except Exception as e:
                     error_message = str(e)
                     print(error_message)
@@ -233,7 +237,9 @@ class ComicTranslatePipeline:
             inpaint_input_img = cv2.convertScaleAbs(inpaint_input_img)
 
             # Saving cleaned image
-            self.main_page.update_image_history(image_path, inpaint_input_img)
+            self.main_page.image_history[image_path] = [image_path]
+            self.main_page.current_history_index[image_path] = 0
+            self.main_page.image_processed.emit(index, inpaint_input_img, image_path)
 
             inpaint_input_img = cv2.cvtColor(inpaint_input_img, cv2.COLOR_BGR2RGB)
 
@@ -264,9 +270,21 @@ class ComicTranslatePipeline:
             entire_raw_text = get_raw_text(blk_list)
             entire_translated_text = get_raw_translation(blk_list)
 
-            if (not entire_raw_text) or (not entire_translated_text):
+            # Parse JSON strings and check if they're empty objects or invalid
+            try:
+                raw_text_obj = json.loads(entire_raw_text)
+                translated_text_obj = json.loads(entire_translated_text)
+                
+                if (not raw_text_obj) or (not translated_text_obj):
+                    self.skip_save(directory, timestamp, base_name, extension, archive_bname, image)
+                    self.main_page.image_skipped.emit(image_path, "Translator", "")
+                    self.log_skipped_image(directory, timestamp, image_path)
+                    continue
+            except json.JSONDecodeError as e:
+                # Handle invalid JSON
+                error_message = str(e)
                 self.skip_save(directory, timestamp, base_name, extension, archive_bname, image)
-                self.main_page.image_skipped.emit(image_path, "Translator", "")
+                self.main_page.image_skipped.emit(image_path, "Translator", error_message)
                 self.log_skipped_image(directory, timestamp, image_path)
                 continue
 
@@ -290,43 +308,96 @@ class ComicTranslatePipeline:
                 break
 
             # Text Rendering
-            text_rendering_settings = settings_page.get_text_rendering_settings()
-            upper_case = text_rendering_settings['upper_case']
-            outline = text_rendering_settings['outline']
+            render_settings = self.main_page.render_settings()
+            upper_case = render_settings.upper_case
+            outline = render_settings.outline
             format_translations(blk_list, trg_lng_cd, upper_case=upper_case)
             get_best_render_area(blk_list, image, inpaint_input_img)
 
-            font = text_rendering_settings['font']
-            font_color = text_rendering_settings['color']
-            font_path = f'fonts/{font}'
-            set_alignment(blk_list, settings_page)
+            font = render_settings.font_family
+            font_color = QColor(render_settings.color)
 
-            max_font_size = self.main_page.settings_page.get_max_font_size()
-            min_font_size = self.main_page.settings_page.get_min_font_size()
+            max_font_size = render_settings.max_font_size
+            min_font_size = render_settings.min_font_size
+            line_spacing = float(render_settings.line_spacing) 
+            outline_width = float(render_settings.outline_width)
+            outline_color = QColor(render_settings.outline_color) 
+            bold = render_settings.bold
+            italic = render_settings.italic
+            underline = render_settings.underline
+            alignment_id = render_settings.alignment_id
+            alignment = self.main_page.button_to_alignment[alignment_id]
+            direction = render_settings.direction
+                
+            text_items_state = []
+            for blk in blk_list:
+                x1, y1, width, height = blk.xywh
 
-            rendered_image = draw_text(inpaint_input_img, blk_list, font_path, colour=font_color, init_font_size=max_font_size, min_font_size=min_font_size, outline=outline)
+                translation = blk.translation
+                if not translation or len(translation) == 1:
+                    continue
 
+                translation, font_size = pyside_word_wrap(translation, font, width, height,
+                                                        line_spacing, outline_width, bold, italic, underline,
+                                                        alignment, direction, max_font_size, min_font_size)
+                
+                # Display text if on current page
+                if index == self.main_page.curr_img_idx:
+                    self.main_page.blk_rendered.emit(translation, font_size, blk)
+
+                if any(lang in trg_lng_cd.lower() for lang in ['zh', 'ja', 'th']):
+                    translation = translation.replace(' ', '')
+
+                text_items_state.append({
+                'text': translation,
+                'font_family': font,
+                'font_size': font_size,
+                'text_color': font_color,
+                'alignment': alignment,
+                'line_spacing': line_spacing,
+                'outline_color': outline_color,
+                'outline_width': outline_width,
+                'bold': bold,
+                'italic': italic,
+                'underline': underline,
+                'position': (x1, y1),
+                'rotation': blk.angle,
+                'scale': 1.0,
+                'transform_origin': blk.tr_origin_point,
+                'width': width,
+                'direction': direction,
+                'selection_outlines': [OutlineInfo(0, len(translation), 
+                                                            outline_color, outline_width, 
+                                                            OutlineType.Full_Document)] if outline else []
+                })
+
+            self.main_page.image_states[image_path]['viewer_state'].update({
+                'text_items_state': text_items_state
+                })
+            
             self.main_page.progress_update.emit(index, total_images, 9, 10, False)
             if self.main_page.current_worker and self.main_page.current_worker.is_cancelled:
                 self.main_page.current_worker = None
                 break
-
-            # Display or set the rendered Image on the viewer once it's done
-            self.main_page.image_processed.emit(index, rendered_image, image_path)
 
             # Saving blocks with texts to history
             self.main_page.image_states[image_path].update({
                 'blk_list': blk_list                   
             })
 
-            if index == self.main_page.current_image_index:
+            if index == self.main_page.curr_img_idx:
                 self.main_page.blk_list = blk_list
                 
             render_save_dir = os.path.join(directory, f"comic_translate_{timestamp}", "translated_images", archive_bname)
             if not os.path.exists(render_save_dir):
                 os.makedirs(render_save_dir, exist_ok=True)
-            rendered_image_save = cv2.cvtColor(rendered_image, cv2.COLOR_BGR2RGB)
-            cv2.imwrite(os.path.join(render_save_dir, f"{base_name}_translated{extension}"), rendered_image_save)
+            sv_pth = os.path.join(render_save_dir, f"{base_name}_translated{extension}")
+
+            im = cv2.cvtColor(inpaint_input_img, cv2.COLOR_RGB2BGR)
+            renderer = ImageSaveRenderer(im)
+            viewer_state = self.main_page.image_states[image_path]['viewer_state']
+            renderer.add_state_to_image(viewer_state)
+            renderer.save_image(sv_pth)
 
             self.main_page.progress_update.emit(index, total_images, 10, 10, False)
 
@@ -357,21 +428,18 @@ class ComicTranslatePipeline:
 
                 # Create the new archive
                 output_base_name = f"{archive_bname}"
-                target_lang = self.main_page.image_states[archive['extracted_images'][0]]['target_lang']
-                target_lang_en = self.main_page.lang_mapping.get(target_lang, target_lang)
-                trg_lng_code = get_language_code(target_lang_en)
                 make(save_as_ext=save_as_ext, input_dir=save_dir, 
-                    output_dir=archive_directory, output_base_name=output_base_name, 
-                    trg_lng=trg_lng_code)
+                    output_dir=archive_directory, output_base_name=output_base_name)
 
                 self.main_page.progress_update.emit(archive_index_input, total_images, 3, 3, True)
                 if self.main_page.current_worker and self.main_page.current_worker.is_cancelled:
                     self.main_page.current_worker = None
                     break
 
-                # Clean up temporary directories
-                shutil.rmtree(save_dir)
-                shutil.rmtree(archive['temp_dir'])
+                # Clean up temporary 
+                if os.path.exists(save_dir):
+                    shutil.rmtree(save_dir)
+                # The temp dir is removed when closing the app
 
                 if is_directory_empty(check_from):
                     shutil.rmtree(check_from)

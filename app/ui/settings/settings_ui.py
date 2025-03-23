@@ -16,29 +16,32 @@ from ..dayu_widgets.spin_box import MSpinBox
 from ..dayu_widgets.browser import MClickBrowserFileToolButton
 
 
+current_file_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_file_dir, '..', '..', '..'))
+font_folder_path = os.path.join(project_root, 'fonts')
+
 class SettingsPageUI(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(SettingsPageUI, self).__init__(parent)
 
         self.credential_widgets = {}
-        self.llm_widgets = {}
         self.export_widgets = {}
-        self.text_rendering_widgets = {}  
 
-        self.inpainters = ['LaMa']
-        self.ocr_engines = [self.tr("Default"), self.tr("Microsoft OCR"), self.tr("Google Cloud Vision")]
+        self.inpainters = ['LaMa', 'AOT', 'MI-GAN']
+        self.detectors = ['RT-DETR-v2']
+        self.ocr_engines = [self.tr("Default"), self.tr('Microsoft OCR'), self.tr('Google Cloud Vision'), self.tr('Gemini-2.0-Flash'), self.tr('GPT-4o')]
         self.inpaint_strategy = [self.tr('Resize'), self.tr('Original'), self.tr('Crop')]
         self.themes = [self.tr('Dark'), self.tr('Light')]
         self.alignment = [self.tr("Left"), self.tr("Center"), self.tr("Right")]
 
-        self.credential_services = [self.tr("Open AI GPT"), self.tr("Microsoft Azure"), self.tr("Google Cloud"), 
+        self.credential_services = [self.tr("Custom"), self.tr("Deepseek"), self.tr("Open AI GPT"), self.tr("Microsoft Azure"), self.tr("Google Cloud"), 
                                     self.tr("Google Gemini"), self.tr("DeepL"), self.tr("Anthropic Claude"), self.tr("Yandex")]
         
         self.supported_translators = [self.tr("GPT-4o"), self.tr("GPT-4o mini"), self.tr("DeepL"), 
-                                    self.tr("Claude-3-Opus"), self.tr("Claude-3.5-Sonnet"), 
-                                    self.tr("Claude-3-Haiku"), self.tr("Gemini-1.5-Flash"), 
-                                    self.tr("Gemini-1.5-Pro"), self.tr("Yandex"), self.tr("Google Translate"),
-                                    self.tr("Microsoft Translator")]
+                                    self.tr("Claude-3-Opus"), self.tr("Claude-3.7-Sonnet"), 
+                                    self.tr("Claude-3.5-Haiku"), self.tr("Gemini-2.0-Flash"), 
+                                    self.tr("Gemini-2.0-Pro"), self.tr("Yandex"), self.tr("Google Translate"),
+                                    self.tr("Microsoft Translator"), self.tr("Deepseek-v3"), self.tr("Custom"),]
         
         self.languages = ['English', '한국어', 'Français', '日本語', 
          '简体中文', '繁體中文', 'русский', 'Deutsch', 
@@ -67,14 +70,16 @@ class SettingsPageUI(QtWidgets.QWidget):
             self.tr("Light"): "Light",
 
             # Translator mappings
+            self.tr("Custom"): "Custom",
+            self.tr("Deepseek-v3"): "Deepseek-v3",
             self.tr("GPT-4o"): "GPT-4o",
             self.tr("GPT-4o mini"): "GPT-4o mini",
             self.tr("DeepL"): "DeepL",
             self.tr("Claude-3-Opus"): "Claude-3-Opus",
-            self.tr("Claude-3.5-Sonnet"): "Claude-3.5-Sonnet",
-            self.tr("Claude-3-Haiku"): "Claude-3-Haiku",
-            self.tr("Gemini-1.5-Flash"): "Gemini-1.5-Flash",
-            self.tr("Gemini-1.5-Pro"): "Gemini-1.5-Pro",
+            self.tr("Claude-3.7-Sonnet"): "Claude-3.7-Sonnet",
+            self.tr("Claude-3.5-Haiku"): "Claude-3.5-Haiku",
+            self.tr("Gemini-2.0-Flash"): "Gemini-2.0-Flash",
+            self.tr("Gemini-2.0-Pro"): "Gemini-2.0-Pro",
             self.tr("Yandex"): "Yandex",
             self.tr("Google Translate"): "Google Translate",
             self.tr("Microsoft Translator"): "Microsoft Translator",
@@ -86,6 +91,11 @@ class SettingsPageUI(QtWidgets.QWidget):
 
             # Inpainter mappings
             "LaMa": "LaMa",
+            "MI-GAN": "MI-GAN",
+            "AOT": "AOT",
+
+            # Detector mappings
+            "RT-DETR-v2": "RT-DETR-v2",
 
             # HD Strategy mappings
             self.tr("Resize"): "Resize",
@@ -98,6 +108,8 @@ class SettingsPageUI(QtWidgets.QWidget):
             self.tr("Right"): "Right",
 
             # Credential services mappings
+            self.tr("Custom"): "Custom",
+            self.tr("Deepseek"): "Deepseek",
             self.tr("Open AI GPT"): "Open AI GPT",
             self.tr("Microsoft Azure"): "Microsoft Azure",
             self.tr("Google Cloud"): "Google Cloud",
@@ -229,7 +241,10 @@ class SettingsPageUI(QtWidgets.QWidget):
         ocr_widget, self.ocr_combo = self._create_title_and_combo(self.tr("OCR"), self.ocr_engines)
         self.set_combo_box_width(self.ocr_combo, self.ocr_engines)
 
-        inpainting_label = MLabel("Inpainting").h4() 
+        detector_widget, self.detector_combo = self._create_title_and_combo(self.tr("Text Detector"), self.detectors)
+        self.set_combo_box_width(self.detector_combo, self.detectors)
+
+        inpainting_label = MLabel(self.tr("Inpainting")).h4() 
         inpainter_widget, self.inpainter_combo = self._create_title_and_combo(self.tr("Inpainter"), self.inpainters)
         self.set_combo_box_width(self.inpainter_combo, self.inpainters)
 
@@ -307,6 +322,8 @@ class SettingsPageUI(QtWidgets.QWidget):
         self.use_gpu_checkbox = MCheckBox(self.tr("Use GPU"))
 
         tools_layout.addWidget(translator_widget)
+        tools_layout.addSpacing(10)
+        tools_layout.addWidget(detector_widget)
         tools_layout.addSpacing(10)
         tools_layout.addWidget(ocr_widget)
         tools_layout.addSpacing(10)
@@ -393,6 +410,66 @@ class SettingsPageUI(QtWidgets.QWidget):
                 service_layout.addWidget(region_input)
                 
                 self.credential_widgets["Microsoft Azure_region"] = region_input
+
+            elif service == "Custom":
+                # API Key
+                api_key_input = MLineEdit()
+                api_key_input.setEchoMode(QtWidgets.QLineEdit.Password)
+                api_key_input.setFixedWidth(400)
+                api_key_prefix = MLabel(self.tr("API Key")).border()
+                self.set_label_width(api_key_prefix)
+                api_key_prefix.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+                api_key_input.set_prefix_widget(api_key_prefix)
+                service_layout.addWidget(api_key_input)
+                
+                self.credential_widgets[f"{service}_api_key"] = api_key_input
+                
+                # Endpoint URL
+                endpoint_input = MLineEdit()
+                endpoint_input.setFixedWidth(400)
+                endpoint_prefix = MLabel(self.tr("Endpoint URL")).border()
+                self.set_label_width(endpoint_prefix)
+                endpoint_prefix.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+                endpoint_input.set_prefix_widget(endpoint_prefix)
+                service_layout.addWidget(endpoint_input)
+                
+                self.credential_widgets[f"{service}_api_url"] = endpoint_input
+
+                # Model Name
+                model_input = MLineEdit()
+                model_input.setFixedWidth(400)
+                model_prefix = MLabel(self.tr("Model")).border()
+                self.set_label_width(model_prefix)
+                model_prefix.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+                model_input.set_prefix_widget(model_prefix)
+                service_layout.addWidget(model_input)
+                
+                self.credential_widgets[f"{service}_model"] = model_input
+
+            elif service == "Yandex":
+                # API Key
+                api_key_input = MLineEdit()
+                api_key_input.setEchoMode(QtWidgets.QLineEdit.Password)
+                api_key_input.setFixedWidth(400)
+                api_key_prefix = MLabel(self.tr("API Key")).border()
+                self.set_label_width(api_key_prefix)
+                api_key_prefix.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+                api_key_input.set_prefix_widget(api_key_prefix)
+                service_layout.addWidget(api_key_input)
+                
+                self.credential_widgets[f"{service}_api_key"] = api_key_input
+                
+                # Folder ID
+                folder_id_input = MLineEdit()
+                folder_id_input.setFixedWidth(400)
+                folder_id_prefix = MLabel(self.tr("Folder ID")).border()
+                self.set_label_width(folder_id_prefix)
+                folder_id_prefix.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+                folder_id_input.set_prefix_widget(folder_id_prefix)
+                service_layout.addWidget(folder_id_input)
+                
+                self.credential_widgets[f"{service}_folder_id"] = folder_id_input
+                
             else:
                 # API Key for other services
                 api_key_input = MLineEdit()
@@ -429,15 +506,14 @@ class SettingsPageUI(QtWidgets.QWidget):
         llms_layout = QtWidgets.QVBoxLayout()
 
         prompt_label = MLabel(self.tr("Extra Context:"))
-        self.llm_widgets['extra_context'] = MTextEdit()
+        self.extra_context = MTextEdit()
 
-        image_checkbox = MCheckBox(self.tr("Provide Image as input to multimodal LLMs"))
-        image_checkbox.setChecked(True)
-        self.llm_widgets['image_input'] = image_checkbox
+        self.image_checkbox = MCheckBox(self.tr("Provide Image as input to multimodal LLMs"))
+        self.image_checkbox.setChecked(True)
 
         llms_layout.addWidget(prompt_label)
-        llms_layout.addWidget(self.llm_widgets['extra_context'])
-        llms_layout.addWidget(image_checkbox)
+        llms_layout.addWidget(self.extra_context)
+        llms_layout.addWidget(self.image_checkbox)
         llms_layout.addStretch(1)
 
         return llms_layout
@@ -445,20 +521,8 @@ class SettingsPageUI(QtWidgets.QWidget):
     def _create_text_rendering_layout(self):
         text_rendering_layout = QtWidgets.QVBoxLayout()
 
-        # Text Alignment
-        alignment_layout = QtWidgets.QVBoxLayout()
-        alignment_label = MLabel(self.tr("Text Alignment")).h4()
-        alignment_combo = MComboBox().small()
-        alignment_combo.addItems(self.alignment)
-        self.set_combo_box_width(alignment_combo, self.alignment)
-        alignment_combo.setCurrentText(self.tr("Center"))
-        alignment_layout.addWidget(alignment_label)
-        alignment_layout.addWidget(alignment_combo)
-        text_rendering_layout.addLayout(alignment_layout)
-
         # Font Selection
         font_layout = QtWidgets.QVBoxLayout()
-        combo_layout = QtWidgets.QHBoxLayout()
 
         min_font_layout = QtWidgets.QHBoxLayout()
         max_font_layout = QtWidgets.QHBoxLayout()
@@ -468,7 +532,7 @@ class SettingsPageUI(QtWidgets.QWidget):
         self.min_font_spinbox = MSpinBox().small()
         self.min_font_spinbox.setFixedWidth(60)
         self.min_font_spinbox.setMaximum(100)
-        self.min_font_spinbox.setValue(12)
+        self.min_font_spinbox.setValue(9)
 
         self.max_font_spinbox = MSpinBox().small()
         self.max_font_spinbox.setFixedWidth(60)
@@ -483,58 +547,32 @@ class SettingsPageUI(QtWidgets.QWidget):
         max_font_layout.addWidget(self.max_font_spinbox)
         max_font_layout.addStretch()
 
-        font_label = MLabel(self.tr("Font")).h4()
-        self.font_combo = MComboBox().small()
-        font_folder_path = os.path.join(os.getcwd(), "fonts")
-        font_files = [f for f in os.listdir(font_folder_path) if f.endswith((".ttf", ".ttc", ".otf", ".woff", ".woff2"))]
-        self.font_combo.addItems(font_files)
-        self.set_combo_box_width(self.font_combo, font_files)
-
+        font_label = MLabel(self.tr("Font:")).h4()
+        
+        # Create a horizontal layout for the font browser and its label
+        font_browser_layout = QtWidgets.QHBoxLayout()
+        import_font_label = MLabel(self.tr("Import Font:"))
         self.font_browser = MClickBrowserFileToolButton(multiple=True)
         self.font_browser.set_dayu_filters([".ttf", ".ttc", ".otf", ".woff", ".woff2"])
         self.font_browser.setToolTip(self.tr("Import the Font to use for Rendering Text on Images"))
-
-        combo_layout.addWidget(self.font_combo)
-        combo_layout.addWidget(self.font_browser)
-        combo_layout.addStretch()
+        
+        # Add the browser and label to the horizontal layout
+        font_browser_layout.addWidget(import_font_label)
+        font_browser_layout.addWidget(self.font_browser)
+        font_browser_layout.addStretch()
 
         font_layout.addWidget(font_label)
-        font_layout.addLayout(combo_layout)
+        font_layout.addLayout(font_browser_layout)  # Add the horizontal layout instead of just the browser
         font_layout.addLayout(min_font_layout)
         font_layout.addLayout(max_font_layout)
 
+        # Uppercase checkbox 
+        self.uppercase_checkbox = MCheckBox(self.tr("Render Text in UpperCase"))
+        text_rendering_layout.addWidget(self.uppercase_checkbox)
+
         text_rendering_layout.addSpacing(10)
         text_rendering_layout.addLayout(font_layout)
-
-        # Font Color
-        color_layout = QtWidgets.QVBoxLayout()
-        color_label = MLabel(self.tr("Color"))
-        self.color_button = QtWidgets.QPushButton()
-        self.color_button.setFixedSize(30, 30)  # Set a fixed size for the button
-        self.color_button.setStyleSheet(
-            "background-color: black; border: none; border-radius: 5px;"
-        )
-        self.color_button.setProperty('selected_color', "#000000")
-        
-        color_layout.addWidget(color_label)
-        color_layout.addWidget(self.color_button)
-        color_layout.addStretch()
-        text_rendering_layout.addLayout(color_layout)
         text_rendering_layout.addSpacing(10)
-
-        uppercase_checkbox = MCheckBox(self.tr("Render Text in UpperCase"))
-        text_rendering_layout.addWidget(uppercase_checkbox)
-
-        self.outline_checkbox = MCheckBox(self.tr("Render Text With White Outline"))
-        self.outline_checkbox.setToolTip(self.tr("When checked, black bubbles with white text will be rendered automatically without changing color"))
-        text_rendering_layout.addWidget(self.outline_checkbox)
-
-        # Store widgets for later access
-        self.text_rendering_widgets['alignment'] = alignment_combo
-        self.text_rendering_widgets['font'] = self.font_combo
-        self.text_rendering_widgets['color_button'] = self.color_button
-        self.text_rendering_widgets['upper_case'] = uppercase_checkbox
-        self.text_rendering_widgets['outline'] = self.outline_checkbox
 
         text_rendering_layout.addStretch(1)
         return text_rendering_layout
@@ -544,33 +582,32 @@ class SettingsPageUI(QtWidgets.QWidget):
 
         batch_label = MLabel(self.tr("Automatic Mode")).h4()
 
-        raw_text_checkbox = MCheckBox(self.tr("Export Raw Text"))
-        translated_text_checkbox = MCheckBox(self.tr("Export Translated text"))
-        inpainted_image_checkbox = MCheckBox(self.tr("Export Inpainted Image"))
-
-        self.export_widgets['raw_text'] = raw_text_checkbox
-        self.export_widgets['translated_text'] = translated_text_checkbox
-        self.export_widgets['inpainted_image'] = inpainted_image_checkbox
+        self.raw_text_checkbox = MCheckBox(self.tr("Export Raw Text"))
+        self.translated_text_checkbox = MCheckBox(self.tr("Export Translated text"))
+        self.inpainted_image_checkbox = MCheckBox(self.tr("Export Inpainted Image"))
 
         export_layout.addWidget(batch_label)
-        export_layout.addWidget(raw_text_checkbox)
-        export_layout.addWidget(translated_text_checkbox)
-        export_layout.addWidget(inpainted_image_checkbox)
+        export_layout.addWidget(self.raw_text_checkbox)
+        export_layout.addWidget(self.translated_text_checkbox)
+        export_layout.addWidget(self.inpainted_image_checkbox)
 
-        file_types = ['pdf', 'epub', 'cbr', 'cbz', 'cb7', 'cbt']
-        available_file_types = ['pdf', 'epub', 'cbz', 'cb7']  # Exclude 'CBR' and add other types
+        self.from_file_types = ['pdf', 'epub', 'cbr', 'cbz', 'cb7', 'cbt', 'zip', 'rar']
+        available_file_types = ['pdf', 'cbz', 'cb7', 'zip']  # Exclude 'CBR' and add other types
 
-        for file_type in file_types:
+        for file_type in self.from_file_types:
             save_layout = QtWidgets.QHBoxLayout()
             save_label = MLabel(self.tr("Save {file_type} as:").format(file_type=file_type))
             save_combo = MComboBox().small()
-            save_items = [ft for ft in available_file_types if ft != 'cbr']
-            save_combo.addItems(save_items)  # Exclude 'CBR'
-            self.set_combo_box_width(save_combo, save_items)
+            save_combo.addItems(available_file_types)  
+            self.set_combo_box_width(save_combo, available_file_types)
 
             # Set the default selection to the file type, or 'cbz' if file type is 'cbr'
-            if file_type == 'cbr':
+            if file_type in ['cbr', 'cbt']:
                 save_combo.setCurrentText('cbz')
+            elif file_type == 'rar':
+                save_combo.setCurrentText('zip')
+            elif file_type == 'epub':
+                save_combo.setCurrentText('pdf')
             elif file_type in available_file_types:
                 save_combo.setCurrentText(file_type)
 

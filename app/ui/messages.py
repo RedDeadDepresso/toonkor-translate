@@ -57,6 +57,24 @@ class Messages:
         )
 
     @staticmethod
+    def show_deepl_th_error(parent):
+        MMessage.error(
+            text=QCoreApplication.translate("Messages", "DeepL does not translate to Thai"),
+            parent=parent,
+            duration=None,
+            closable=True
+        )
+
+    @staticmethod
+    def show_deepl_vi_error(parent):
+        MMessage.error(
+            text=QCoreApplication.translate("Messages", "DeepL does not translate to Vietnamese"),
+            parent=parent,
+            duration=None,
+            closable=True
+        )
+
+    @staticmethod
     def show_translation_complete(parent):
         MMessage.success(
             text=QCoreApplication.translate("Messages", "Comic has been Translated!"),

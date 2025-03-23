@@ -7,7 +7,7 @@ from PySide6.QtGui import QFont, QFontDatabase
 
 from .dayu_widgets import dayu_theme
 from .dayu_widgets.divider import MDivider
-from .dayu_widgets.combo_box import MComboBox
+from .dayu_widgets.combo_box import MComboBox, MFontComboBox
 from .dayu_widgets.check_box import MCheckBox
 from .dayu_widgets.text_edit import MTextEdit
 from .dayu_widgets.line_edit import MLineEdit
@@ -17,15 +17,20 @@ from .dayu_widgets.tool_button import MToolButton
 from .dayu_widgets.radio_button import MRadioButton
 from .dayu_widgets.button_group import MPushButtonGroup, MToolButtonGroup
 from .dayu_widgets.slider import MSlider
-from .dayu_widgets.label import MLabel
-from .dayu_widgets.qt import MPixmap
+from .dayu_widgets.qt import MPixmap, MIcon
 from .dayu_widgets.progress_bar import MProgressBar
 from .dayu_widgets.loading import MLoading
 from .dayu_widgets.theme import MTheme
+from .dayu_widgets.menu import MMenu
 
 from .canvas.image_viewer import ImageViewer
 from .settings.settings_page import SettingsPage
+from .list_view import PageListView
 
+
+current_file_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_file_dir, '..', '..'))
+font_folder_path = os.path.join(project_root, 'fonts')
 
 supported_source_languages = [
 "Korean", "Japanese", "French", "Chinese", "English",
@@ -35,8 +40,9 @@ supported_source_languages = [
 supported_target_languages = [
 "English", "Korean", "Japanese", "French", "Simplified Chinese",
 "Traditional Chinese", "Russian", "German", "Dutch", "Spanish", 
-"Italian", "Turkish", "Polish", "Portuguese", "Brazilian Portuguese"
-]
+"Italian", "Turkish", "Polish", "Portuguese", "Brazilian Portuguese",
+"Thai", "Vietnamese", "Hungarian", "Indonesian",  "Finnish",
+"Arabic"]
 
 
 class ComicTranslateUI(QtWidgets.QMainWindow):
@@ -59,8 +65,10 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         self.image_viewer = ImageViewer(self)
         self.settings_page = SettingsPage(self)
         self.settings_page.theme_changed.connect(self.apply_theme)
+        self.settings_page.font_imported.connect(self.set_font)
         self.main_content_widget = None
         self.tool_buttons = {}  # Dictionary to store mutually exclusive tool names and their corresponding buttons
+        self.page_list = PageListView()
 
         self.grabGesture(QtCore.Qt.GestureType.PanGesture)
         self.grabGesture(QtCore.Qt.GestureType.PinchGesture)
@@ -81,7 +89,13 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
             self.tr("Turkish"): "Turkish",
             self.tr("Polish"): "Polish",
             self.tr("Portuguese"): "Portuguese",
-            self.tr("Brazilian Portuguese"): "Brazilian Portuguese"
+            self.tr("Brazilian Portuguese"): "Brazilian Portuguese",
+            self.tr("Thai"): "Thai",
+            self.tr("Vietnamese"): "Vietnamese",
+            self.tr("Indonesian"): "Indonesian",
+            self.tr("Hungarian"): "Hungarian",
+            self.tr("Finnish"): "Finnish",
+            self.tr("Arabic"): "Arabic",
         }
         # Create reverse mapping
         self.reverse_lang_mapping = {v: k for k, v in self.lang_mapping.items()}
@@ -89,7 +103,7 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         self.button_to_alignment = {
             0: QtCore.Qt.AlignmentFlag.AlignLeft,
             1: QtCore.Qt.AlignmentFlag.AlignCenter,
-            -1: QtCore.Qt.AlignmentFlag.AlignRight,
+            2: QtCore.Qt.AlignmentFlag.AlignRight,
         }
 
         self._init_ui()
@@ -114,31 +128,71 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         nav_divider = MDivider()
         nav_divider.setFixedWidth(30)
 
-        self.tool_browser = MClickBrowserFileToolButton(multiple=True)
+        # Create the tool browser button
+        self.tool_browser = MToolButton()
         self.tool_browser.set_dayu_svg("upload-file.svg")
-        self.tool_browser.set_dayu_filters([".png", ".jpg", ".jpeg", ".webp", ".bmp",
-                                            ".zip", ".cbz", ".cbr", ".cb7", ".cbt",
-                                            ".pdf", ".epub"])
         self.tool_browser.setToolTip(self.tr("Import Images, PDFs, Epubs or Comic Book Archive Files(cbr, cbz, etc)"))
+        self.tool_browser.clicked.connect(self.show_tool_menu)
 
+        self.image_browser_button = MClickBrowserFileToolButton(multiple=True)
+        self.image_browser_button.set_dayu_filters([".png", ".jpg", ".jpeg", ".webp", ".bmp"])
+        
+        self.document_browser_button = MClickBrowserFileToolButton(multiple=True)
+        self.document_browser_button.set_dayu_filters([".pdf", ".epub"])
+        
+        self.archive_browser_button = MClickBrowserFileToolButton(multiple=True)
+        self.archive_browser_button.set_dayu_filters([".zip", ".rar", ".7z", ".tar"])
+        
+        self.comic_browser_button = MClickBrowserFileToolButton(multiple=True)
+        self.comic_browser_button.set_dayu_filters([".cbz", ".cbr", ".cb7", ".cbt"])
+
+        self.project_browser_button = MClickBrowserFileToolButton(multiple=False)
+        self.project_browser_button.set_dayu_filters([".ctpr"])
+
+        self.tool_menu = MMenu(parent=self)
+        
+        # Add actions to the menu and connect them to the browser buttons
+        image_action = self.tool_menu.addAction(MIcon("ion--image-outline.svg"), self.tr("Images"))
+        image_action.triggered.connect(self.image_browser_button.clicked)
+        
+        document_action = self.tool_menu.addAction(MIcon("mingcute--document-line.svg"), self.tr("Document"))
+        document_action.triggered.connect(self.document_browser_button.clicked)
+        
+        archive_action = self.tool_menu.addAction(MIcon("flowbite--file-zip-outline.svg"), self.tr("Archive"))
+        archive_action.triggered.connect(self.archive_browser_button.clicked)
+        
+        comic_action = self.tool_menu.addAction(MIcon("mdi--comic-thought-bubble-outline.svg"), self.tr("Comic Book Archive"))
+        comic_action.triggered.connect(self.comic_browser_button.clicked)
+
+        project_action = self.tool_menu.addAction(MIcon("ct-file-icon.svg"), self.tr("Project File"))
+        project_action.triggered.connect(self.project_browser_button.clicked)
+
+        # Rest of the code remains the same
         self.save_browser = MClickSaveFileToolButton()
         save_file_types = [("Images", ["png", "jpg", "jpeg", "webp", "bmp"])]
         self.save_browser.set_file_types(save_file_types)
         self.save_browser.set_dayu_svg("save.svg")
         self.save_browser.setToolTip(self.tr("Save Currently Loaded Image"))
 
+        self.save_project_button = MToolButton()
+        self.save_project_button.set_dayu_svg("fluent--save-16-regular.svg")
+        self.save_project_button.setToolTip(self.tr("Save Project"))
+
+        self.save_as_project_button = MToolButton()
+        self.save_as_project_button.set_dayu_svg("fluent--save-as-24-regular.svg")
+        self.save_as_project_button.setToolTip(self.tr("Save as"))
+
         save_all_file_types = [
             ("ZIP files", "zip"),
             ("CBZ files", "cbz"),
             ("CB7 files", "cb7"),
             ("PDF files", "pdf"),
-            ("EPUB files", "epub"),
         ]
 
         self.save_all_browser = MClickSaveFileToolButton()
-        self.save_all_browser.set_dayu_svg("save-all.svg")
+        self.save_all_browser.set_dayu_svg("tabler--file-export.svg")
         self.save_all_browser.set_file_types(save_all_file_types)
-        self.save_all_browser.setToolTip(self.tr("Save all Images"))
+        self.save_all_browser.setToolTip(self.tr("Export all Images"))
 
         nav_tool_group = MToolButtonGroup(orientation=QtCore.Qt.Vertical, exclusive=True)
         nav_tools = [
@@ -149,6 +203,8 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         nav_tool_group.get_button_group().buttons()[0].setChecked(True)
 
         nav_rail_layout.addWidget(self.tool_browser)
+        nav_rail_layout.addWidget(self.save_project_button)
+        nav_rail_layout.addWidget(self.save_as_project_button)
         nav_rail_layout.addWidget(self.save_browser)
         nav_rail_layout.addWidget(self.save_all_browser)
         nav_rail_layout.addWidget(nav_divider)
@@ -158,6 +214,10 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         nav_rail_layout.setContentsMargins(0, 0, 0, 0)
 
         return nav_rail_layout
+
+    def show_tool_menu(self):
+        # Show the tool menu at the appropriate position
+        self.tool_menu.exec_(self.tool_browser.mapToGlobal(self.tool_browser.rect().bottomLeft()))
     
     def create_push_button(self, text: str, clicked = None):
         button = MPushButton(text)
@@ -175,13 +235,20 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
 
         header_layout = QtWidgets.QHBoxLayout()
 
+        self.undo_tool_group = MToolButtonGroup(orientation=QtCore.Qt.Horizontal, exclusive=True)
+        undo_tools = [
+            {"svg": "undo.svg", "checkable": False, "tooltip": self.tr("Undo")},
+            {"svg": "redo.svg", "checkable": False, "tooltip": self.tr("Redo")},
+        ]
+        self.undo_tool_group.set_button_list(undo_tools)
+
         button_config_list = [
             {"text": self.tr("Detect Text Boxes"), "dayu_type": MPushButton.DefaultType, "enabled": False},
             {"text": self.tr("OCR"), "dayu_type": MPushButton.DefaultType, "enabled": False},
             {"text": self.tr("Get Translations"), "dayu_type": MPushButton.DefaultType, "enabled": False},
             {"text": self.tr("Segment Text"), "dayu_type": MPushButton.DefaultType, "enabled": False},
             {"text": self.tr("Clean Image"), "dayu_type": MPushButton.DefaultType, "enabled": False},
-            {"text": self.tr("Rendering"), "dayu_type": MPushButton.DefaultType, "enabled": False},
+            {"text": self.tr("Render"), "dayu_type": MPushButton.DefaultType, "enabled": False},
         ]
 
         self.hbutton_group = MPushButtonGroup()
@@ -211,8 +278,8 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         self.cancel_button.setEnabled(True)
         self.cancel_button.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
+        header_layout.addWidget(self.undo_tool_group)
         header_layout.addWidget(self.hbutton_group)
-
         header_layout.addWidget(self.loading)
         header_layout.addStretch()
         header_layout.addWidget(self.manual_radio)
@@ -223,17 +290,12 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         # Left Side (Image Selection)
         left_layout = QtWidgets.QVBoxLayout()
         left_layout.addWidget(MDivider())
+
         self.image_card_layout = QtWidgets.QVBoxLayout()
         self.image_card_layout.addStretch(1)  # Add stretch to keep cards at the top
-        scroll = QtWidgets.QScrollArea()
-        scroll.setWidgetResizable(True)
-        img_selection = QtWidgets.QWidget()
-        img_selection.setLayout(self.image_card_layout)
-        scroll.setWidget(img_selection)
-        scroll.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
-        scroll.setMinimumWidth(60)
 
-        left_layout.addWidget(scroll)
+        self.page_list.setLayout(self.image_card_layout)
+        left_layout.addWidget(self.page_list)
         left_widget = QtWidgets.QWidget()
         left_widget.setLayout(left_layout)
 
@@ -245,7 +307,7 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         self.drag_browser.set_dayu_svg("attachment_line.svg")
         self.drag_browser.set_dayu_filters([".png", ".jpg", ".jpeg", ".webp", ".bmp",
                                             ".zip", ".cbz", ".cbr", ".cb7", ".cbt",
-                                            ".pdf", ".epub"])
+                                            ".pdf", ".epub", ".ctpr"])
         self.drag_browser.setToolTip(self.tr("Import Images, PDFs, Epubs or Comic Book Archive Files(cbr, cbz, etc)"))
         self.central_stack.addWidget(self.drag_browser)
         
@@ -289,28 +351,28 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
 
         # Text Render Settings
         text_render_layout = QtWidgets.QVBoxLayout()
-        text_render_layout.addSpacing(20)
-
         font_settings_layout = QtWidgets.QHBoxLayout()
 
-        self.font_dropdown = MComboBox().small()
+        self.font_dropdown = MFontComboBox().small()
         self.font_dropdown.setToolTip(self.tr("Font"))
-        font_folder_path = os.path.join(os.getcwd(), "fonts")
-        font_files = [os.path.join(font_folder_path, f) for f in os.listdir(font_folder_path)
-                       if f.endswith((".ttf", ".ttc", ".otf", ".woff", ".woff2"))]
-        font_families = [self.get_font_family(f) for f in font_files]
-        self.font_dropdown.addItems(font_families)
+        font_files = [os.path.join(font_folder_path, f) for f in os.listdir(font_folder_path) 
+                      if f.endswith((".ttf", ".ttc", ".otf", ".woff", ".woff2"))]
+        for font in font_files:
+            self.add_custom_font(font)
 
         self.font_size_dropdown = MComboBox().small()
         self.font_size_dropdown.setToolTip(self.tr("Font Size"))
-        self.font_size_dropdown.addItems(['4', '8', '9', '10', '11', '12', '14', '16', '18', 
+        self.font_size_dropdown.addItems(['4', '6', '8', '9', '10', '11', '12', '14', '16', '18', 
                                           '20', '22', '24', '28', '32', '36', '48', '72'])
         self.font_size_dropdown.setCurrentText('12')
         self.font_size_dropdown.setFixedWidth(60)
+        self.font_size_dropdown.set_editable(True)
+
         self.line_spacing_dropdown = MComboBox().small()
         self.line_spacing_dropdown.setToolTip(self.tr("Line Spacing"))
         self.line_spacing_dropdown.addItems(['1.0', '1.1', '1.2', '1.3', '1.4', '1.5'])
         self.line_spacing_dropdown.setFixedWidth(60)
+        self.line_spacing_dropdown.set_editable(True)
 
         font_settings_layout.addWidget(self.font_dropdown)
         font_settings_layout.addWidget(self.font_size_dropdown)
@@ -342,7 +404,7 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
             {"svg": "tabler--align-right.svg", "checkable": True, "tooltip": "Align Right"},
         ]
         self.alignment_tool_group.set_button_list(alignment_tools)
-        self.alignment_tool_group.get_button_group().buttons()[1].setChecked(True)
+        self.alignment_tool_group.set_dayu_checked(1)
 
         self.bold_button = self.create_tool_button(svg = "bold.svg", checkable=True)
         self.bold_button.setToolTip(self.tr("Bold"))
@@ -376,13 +438,14 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         self.outline_width_dropdown.setFixedWidth(60)
         self.outline_width_dropdown.setToolTip(self.tr("Outline Width"))
         self.outline_width_dropdown.addItems(['1.0', '1.15', '1.3', '1.4', '1.5'])
+        self.outline_width_dropdown.set_editable(True)
 
         outline_settings_layout.addWidget(self.outline_checkbox)
         outline_settings_layout.addWidget(self.outline_font_color_button)
         outline_settings_layout.addWidget(self.outline_width_dropdown)
         outline_settings_layout.addStretch()
 
-        rendering_divider_top = MDivider(self.tr('Custom font settings for the block'))
+        rendering_divider_top = MDivider()
         rendering_divider_bottom = MDivider()
         text_render_layout.addWidget(rendering_divider_top)
         text_render_layout.addLayout(font_settings_layout)
@@ -398,7 +461,7 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
 
         # Pan Button
         self.pan_button = self.create_tool_button(svg = "pan_tool.svg", checkable = True)
-        self.pan_button.setToolTip("Pan Image")
+        self.pan_button.setToolTip(self.tr("Pan Image"))
         self.pan_button.clicked.connect(self.toggle_pan_tool)
         self.tool_buttons['pan'] = self.pan_button
 
@@ -414,12 +477,12 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         box_tools_lay = QtWidgets.QHBoxLayout()
 
         self.box_button = self.create_tool_button(svg = "select.svg", checkable=True)
-        self.box_button.setToolTip("Draw or Select Text Boxes")
+        self.box_button.setToolTip(self.tr("Draw or Select Text Boxes"))
         self.box_button.clicked.connect(self.toggle_box_tool)
         self.tool_buttons['box'] = self.box_button
 
         self.delete_button = self.create_tool_button(svg = "trash_line.svg", checkable=False)
-        self.delete_button.setToolTip("Delete Selected Box")
+        self.delete_button.setToolTip(self.tr("Delete Selected Box"))
 
         self.clear_rectangles_button = self.create_tool_button(svg = "clear-outlined.svg")
         self.clear_rectangles_button.setToolTip(self.tr("Remove all the Boxes on the Image"))
@@ -469,48 +532,21 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         self.eraser_button.clicked.connect(self.toggle_eraser_tool)
         self.tool_buttons['eraser'] = self.eraser_button
 
-        self.chk_inp_tool_group = MToolButtonGroup(orientation=QtCore.Qt.Horizontal, exclusive=True)
-        chk_inp_tools = [
-            {"svg": "undo.svg", "checkable": False, "tooltip": self.tr("Undo Brush Stroke"), "clicked": self.brush_undo},
-            {"svg": "redo.svg", "checkable": False, "tooltip": self.tr("Redo Brush Stroke"), "clicked": self.brush_redo},
-        ]
-        self.chk_inp_tool_group.set_button_list(chk_inp_tools)
-
         self.clear_brush_strokes_button = self.create_tool_button(svg = "clear-outlined.svg")
         self.clear_brush_strokes_button.setToolTip(self.tr("Remove all the brush strokes on the Image"))
 
         inp_tools_lay.addWidget(self.brush_button)
         inp_tools_lay.addWidget(self.eraser_button)
-        inp_tools_lay.addWidget(self.chk_inp_tool_group)
         inp_tools_lay.addWidget(self.clear_brush_strokes_button)
         inp_tools_lay.addStretch()
 
-        self.brush_size_slider = MSlider()
-        self.eraser_size_slider = MSlider()
+        self.brush_eraser_slider = MSlider()
 
-        self.brush_size_slider.setMinimum(1)
-        self.brush_size_slider.setMaximum(50)
-        self.brush_size_slider.setValue(10)
-        self.brush_size_slider.valueChanged.connect(self.set_brush_size)
-
-        self.eraser_size_slider.setMinimum(1)
-        self.eraser_size_slider.setMaximum(50)
-        self.eraser_size_slider.setValue(20)
-        self.eraser_size_slider.valueChanged.connect(self.set_eraser_size)
-        b_slider_label = MLabel(self.tr("Brush Size Slider"))
-        e_slider_label = MLabel(self.tr("Eraser Size Slider"))
-
-        # For returning an Image
-        return_buttons_lay = QtWidgets.QHBoxLayout()
-        self.return_buttons_group = MToolButtonGroup(orientation=QtCore.Qt.Horizontal, exclusive=False)
-        return_buttons = [
-            {"text": self.tr("Undo Image"), "svg": "arrow-left.svg", "checkable": False, "tooltip": self.tr("Undo Image")},
-            {"text": self.tr("Redo Image"), "svg": "arrow-right.svg", "checkable": False, "tooltip": self.tr("Redo Image")},
-        ]
-
-        self.return_buttons_group.set_button_list(return_buttons)
-        return_buttons_lay.addWidget(self.return_buttons_group)
-
+        self.brush_eraser_slider.setMinimum(1)
+        self.brush_eraser_slider.setMaximum(50)
+        self.brush_eraser_slider.setValue(10)
+        self.brush_eraser_slider.setToolTip(self.tr("Brush/Eraser Size Slider"))
+        self.brush_eraser_slider.valueChanged.connect(self.set_brush_eraser_size)
 
         tools_layout.addLayout(misc_lay)
         box_div = MDivider(self.tr('Box Drawing'))
@@ -520,11 +556,7 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         inp_div = MDivider(self.tr('Inpainting'))
         tools_layout.addWidget(inp_div)
         tools_layout.addLayout(inp_tools_lay)
-        tools_layout.addWidget(b_slider_label)
-        tools_layout.addWidget(self.brush_size_slider)
-        tools_layout.addWidget(e_slider_label)
-        tools_layout.addWidget(self.eraser_size_slider)
-        tools_layout.addLayout(return_buttons_lay)
+        tools_layout.addWidget(self.brush_eraser_slider)
         tools_widget.setLayout(tools_layout)
 
         tools_scroll = QtWidgets.QScrollArea()
@@ -625,14 +657,23 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
     def toggle_brush_tool(self):
         if self.brush_button.isChecked():
             self.set_tool('brush')
+            size = self.image_viewer.brush_size
+            self.set_slider_size(size)
         else:
             self.set_tool(None)
 
     def toggle_eraser_tool(self):
         if self.eraser_button.isChecked():
             self.set_tool('eraser')
+            size = self.image_viewer.eraser_size
+            self.set_slider_size(size)
         else:
             self.set_tool(None)
+
+    def set_slider_size(self, size: int):
+        self.brush_eraser_slider.blockSignals(True)
+        self.brush_eraser_slider.setValue(size)
+        self.brush_eraser_slider.blockSignals(False)
 
     def set_tool(self, tool_name: str):
         self.image_viewer.unsetCursor()
@@ -648,20 +689,14 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         if not tool_name:
             for button in self.tool_buttons.values():
                 button.setChecked(False)
+            self.image_viewer.setDragMode(QtWidgets.QGraphicsView.DragMode.ScrollHandDrag)
 
-    def set_brush_size(self, size: int):
+    def set_brush_eraser_size(self, size: int):
         if self.image_viewer.hasPhoto():
             image = self.image_viewer.get_cv2_image()
             h, w, c = image.shape
             scaled_size = self.scale_size(size, w, h)
-            self.image_viewer.set_brush_size(scaled_size)
-
-    def set_eraser_size(self, size: int):
-        if self.image_viewer.hasPhoto():
-            image = self.image_viewer.get_cv2_image()
-            h, w, c = image.shape
-            scaled_size = self.scale_size(size, w, h)
-            self.image_viewer.set_eraser_size(scaled_size)
+            self.image_viewer.set_br_er_size(size, scaled_size)
 
     def scale_size(self, base_size, image_width, image_height):
         # Calculate the diagonal of the image
@@ -676,12 +711,6 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         
         return scaled_size
 
-    def brush_undo(self):
-        self.image_viewer.undo_brush_stroke()
-
-    def brush_redo(self):
-        self.image_viewer.redo_brush_stroke()
-
     def get_font_family(self, font_input: str) -> QFont:
         # Check if font_input is a file path
         if os.path.splitext(font_input)[1].lower() in [".ttf", ".ttc", ".otf", ".woff", ".woff2"]:
@@ -694,6 +723,11 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         # If not a file path or loading failed, treat as font family name
         return font_input
     
+    def add_custom_font(self, font_input: str):
+        # Check if font_input is a file path
+        if os.path.splitext(font_input)[1].lower() in [".ttf", ".ttc", ".otf", ".woff", ".woff2"]:
+            QFontDatabase.addApplicationFont(font_input)
+
     def get_color(self):
         default_color = QtGui.QColor('#000000')
         color_dialog = QtWidgets.QColorDialog()
@@ -701,5 +735,8 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         if color_dialog.exec() == QtWidgets.QDialog.Accepted:
             color = color_dialog.selectedColor()
             return color
+        
+    def set_font(self, font_family: str):
+        self.font_dropdown.setCurrentFont(font_family)
         
 
