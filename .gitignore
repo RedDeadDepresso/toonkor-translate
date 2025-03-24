@@ -19,8 +19,8 @@ comic-translate-venv/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-toonkor_collector2/media/
-frontend/node_modules/
+django_backend/media/
+django_frontend/node_modules/
 
 # uv
 .python-version

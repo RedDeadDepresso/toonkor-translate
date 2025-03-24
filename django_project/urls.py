@@ -20,13 +20,13 @@ from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, re_path
-from toonkor_collector2.views import serve_react
+from django_backend.views import serve_react
 
 if "makemigrations" in sys.argv or "migrate" in sys.argv:
     urlpatterns = []
     
 else:
-    from toonkor_collector2.api import api
+    from django_backend.api import api
     urlpatterns = [
         path("admin/", admin.site.urls),
         path("api/", api.urls),

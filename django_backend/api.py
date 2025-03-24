@@ -7,10 +7,10 @@ from django.forms.models import model_to_dict
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
-from toonkor_collector2.models import Manhwa, Chapter, ToonkorSettings
-from toonkor_collector2.schemas import ChapterPaginationSchema, ChapterSchema, ManhwaSchema, SetToonkorUrlSchema, ResponseToonkorUrlSchema
-from toonkor_collector2.mangadex_api import mangadex_api
-from toonkor_collector2.toonkor_api import toonkor_api
+from django_backend.models import Manhwa, Chapter, ToonkorSettings
+from django_backend.schemas import ChapterPaginationSchema, ChapterSchema, ManhwaSchema, SetToonkorUrlSchema, ResponseToonkorUrlSchema
+from django_backend.mangadex_api import mangadex_api
+from django_backend.toonkor_api import toonkor_api
 
 
 api = NinjaAPI()
@@ -46,10 +46,9 @@ def exract_mangadex_url(url):
 
 
 def extract_toonkor_url(url):
-    # Updated pattern to match and capture the full path after the domain
-    pattern = r'^https?://(www\.)?toonkor\d{3}\.com(/[\w%\-가-힣/]+).*$'
-    match = re.match(pattern, url)    
-    return match.group(2) if match else None
+    pattern = r'^https?://tkor\d+\.com(/[\w%\-가-힣/]+).*$'
+    match = re.match(pattern, url)
+    return match.group(1) if match else None
 
 
 def search_database(toonkor_id: str) -> Manhwa | None:

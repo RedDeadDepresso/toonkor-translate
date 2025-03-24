@@ -14,10 +14,10 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-TEMPLATE_DIR = BASE_DIR.joinpath('toonkor_collector2', 'templates')
-STATIC_DIR = BASE_DIR.joinpath('toonkor_collector2', 'static')
-MEDIA_DIR = BASE_DIR.joinpath('toonkor_collector2', 'media')
-REACT_APP_BUILD_PATH = BASE_DIR.joinpath('frontend', 'dist')
+TEMPLATE_DIR = BASE_DIR.joinpath('django_backend', 'templates')
+STATIC_DIR = BASE_DIR.joinpath('django_backend', 'static')
+MEDIA_DIR = BASE_DIR.joinpath('django_backend', 'media')
+REACT_APP_BUILD_PATH = BASE_DIR.joinpath('django_frontend', 'dist')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 
     "ninja",
-    "toonkor_collector2",
+    "django_backend",
 ]
 
 MIDDLEWARE = [
@@ -139,7 +139,7 @@ STATIC_URL = 'django_static/'
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-STATICFILES_DIRS = [STATIC_DIR, ]
+STATICFILES_DIRS = []
 
 MEDIA_ROOT = MEDIA_DIR
 MEDIA_URL = "/media/"

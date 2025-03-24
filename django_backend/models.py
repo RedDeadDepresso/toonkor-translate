@@ -35,7 +35,7 @@ class Manhwa(models.Model):
     
     @cached_property
     def path(self) -> str:
-        return f"toonkor_collector2{self.media_path}"
+        return f"django_backend{self.media_path}"
 
 
 class StatusChoices(models.TextChoices):
@@ -65,7 +65,7 @@ class Chapter(models.Model):
     
     @cached_property
     def manhwa_path(self) -> str:
-        return f"toonkor_collector2{self.manhwa_media_path}"
+        return f"django_backend{self.manhwa_media_path}"
 
     @cached_property
     def downloaded_path(self) -> str:

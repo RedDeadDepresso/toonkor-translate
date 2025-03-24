@@ -8,8 +8,8 @@ import re
 import os
 import concurrent.futures
 from django.utils.timesince import timesince
-from toonkor_collector2.models import ToonkorSettings, encode_name
-from toonkor_collector2.schemas import ManhwaSchema
+from django_backend.models import ToonkorSettings, encode_name
+from django_backend.schemas import ManhwaSchema
 
 
 class ToonkorAPI:
@@ -266,7 +266,7 @@ class ToonkorAPI:
     def download_chapter(self, manhwa_id: str, chapter_dict: dict) -> list[str]:
         try:
             # Create necessary directories
-            manhwa_path = f"toonkor_collector2/media/{encode_name(manhwa_id)}"
+            manhwa_path = f"django_backend/media/{encode_name(manhwa_id)}"
             os.makedirs(f"{manhwa_path}/{chapter_dict['index']}", exist_ok=True)
 
             # Get chapter details

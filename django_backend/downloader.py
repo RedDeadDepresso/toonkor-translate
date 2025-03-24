@@ -4,9 +4,9 @@ import threading
 from collections import deque
 from channels.layers import get_channel_layer
 from asgiref.sync import sync_to_async
-from toonkor_collector2.api import update_cached_chapter, start_comic_proc
-from toonkor_collector2.models import Chapter, StatusChoices
-from toonkor_collector2.toonkor_api import toonkor_api
+from django_backend.api import update_cached_chapter, start_comic_proc
+from django_backend.models import Chapter, StatusChoices
+from django_backend.toonkor_api import toonkor_api
 
 
 class Downloader:

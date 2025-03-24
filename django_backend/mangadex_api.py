@@ -1,6 +1,6 @@
 import requests
 import concurrent.futures
-from toonkor_collector2.schemas import ManhwaSchema
+from django_backend.schemas import ManhwaSchema
 
 
 class MangadexAPI:

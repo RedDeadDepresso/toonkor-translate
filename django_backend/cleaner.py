@@ -2,10 +2,10 @@ import asyncio
 import threading
 
 from asgiref.sync import sync_to_async
-from toonkor_collector2.api import update_cached_chapter
+from django_backend.api import update_cached_chapter
 from collections import deque
 from channels.layers import get_channel_layer
-from toonkor_collector2.models import Chapter
+from django_backend.models import Chapter
 
 
 class Cleaner:

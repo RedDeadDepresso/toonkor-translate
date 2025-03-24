@@ -3,10 +3,10 @@ import json
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-from toonkor_collector2.cleaner import cleaner
-from toonkor_collector2.downloader import downloader
-from toonkor_collector2.models import Chapter, StatusChoices, encode_name
-from toonkor_collector2.api import update_cached_chapter
+from django_backend.cleaner import cleaner
+from django_backend.downloader import downloader
+from django_backend.models import Chapter, StatusChoices, encode_name
+from django_backend.api import update_cached_chapter
 
 
 class QtConsumer(AsyncWebsocketConsumer):
