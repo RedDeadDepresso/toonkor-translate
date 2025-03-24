@@ -40,7 +40,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
   const { openLocalURL, openToonkorURL } = useOpenURL();
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://127.0.0.1:8000/ws/download_translate/${toonkorId}/`);
+    const ws = new WebSocket(`/ws/download_translate/${toonkorId}/`);
     setSocket(ws);
 
     ws.onopen = () => console.log('Connected to Django server');

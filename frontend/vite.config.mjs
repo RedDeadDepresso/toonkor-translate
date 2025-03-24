@@ -13,6 +13,7 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:8000',
       '/media': 'http://localhost:8000',
+      '/ws': 'ws://localhost:8000',
     }
   }
 });
