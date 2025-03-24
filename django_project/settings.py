@@ -17,7 +17,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_DIR = BASE_DIR.joinpath('toonkor_collector2', 'templates')
 STATIC_DIR = BASE_DIR.joinpath('toonkor_collector2', 'static')
 MEDIA_DIR = BASE_DIR.joinpath('toonkor_collector2', 'media')
-REACT_APP_BUILD_PATH = BASE_DIR.joinpath('vite-template', 'dist')
+REACT_APP_BUILD_PATH = BASE_DIR.joinpath('frontend', 'dist')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
