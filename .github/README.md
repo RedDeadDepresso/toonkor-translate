@@ -3,10 +3,10 @@
 - Follow these [instructions](https://github.com/ogkalu2/comic-translate)
 - Install the additional requirements
 ```bash
-pip install -r requirements-django.txt
+uv add -r requirements-django.txt --compile-bytecode
 ```
 ```bash
-python manage.py migrate
+uv run manage.py migrate
 ```
 ### Optional
 - [Get a Gemini API key](https://ai.google.dev/gemini-api/docs/api-key)
@@ -14,12 +14,12 @@ python manage.py migrate
 ## Usage
 Navigate to Toonkor Translate folder and in your terminal run the command:
 ```bash
-python manage.py runserver
+uv run manage.py runserver
 ```
 - Open your browser and go to [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 - Click the button on the top right with a terminal icon. This will launch Comic Translate.
 - Paste your Gemini API key into Settings > Credentials in Comic Translate.
-- Go to Settings > Tools and change Translator to Gemini-1.5-Flash.
+- Go to Settings > Tools and change Translator to Gemini-2.0-Flash.
 - Go to Personalization > Language and change it to the language you want it translated to.
 - Go to the Browse section on the website and search for any manhwa you are interested in. You can enter English terms or paste a Mangadex URL directly.
 - Select the chapters you want translated and click the translate button on the top right. They will be added to the Comic Translate queue. Once finished, you can view the chapter in your browser.
