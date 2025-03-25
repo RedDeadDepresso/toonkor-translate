@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import SettingsDrawer from '../SettingsDrawer/SettingsDrawer';
 import { useContext, useEffect } from 'react';
 import { SettingsContext } from '@/contexts/SettingsContext';
-
+import icon from "@/favicon.svg";
 
 interface searchBarProps {
   showSearchBar: boolean;
@@ -63,14 +63,7 @@ export function NavBar({ showSearchBar, searchPlaceHolder = '', onSearchChange =
         <Group>
           <Burger opened={opened} onClick={toggle} size="sm" hiddenFrom="md" />
           <Group gap={5} className={classes.links} visibleFrom="md">
-            <ActionIcon
-              variant="gradient"
-              size={35}
-              aria-label="Gradient action icon"
-              gradient={{ from: 'blue', to: 'cyan', deg: 90 }}
-            >
-              <IconAlphabetKorean />
-            </ActionIcon>
+            <img src={icon} alt="icon" width="32" height="32" />
             {items}
           </Group>
         </Group>
