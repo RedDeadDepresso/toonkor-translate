@@ -1,13 +1,4 @@
-import {
-  Group,
-  TextInput,
-  ActionIcon,
-  rem,
-  Tooltip,
-  Text,
-  Button,
-  Stack,
-} from '@mantine/core';
+import { Group, TextInput, ActionIcon, rem, Tooltip, Text, Button, Stack } from '@mantine/core';
 import { useDisclosure, useInputState, useMediaQuery } from '@mantine/hooks';
 import { IconSearch, IconSettings, IconAppWindow, IconWorld, IconBooks } from '@tabler/icons-react';
 import classes from './NavBar.module.css';
@@ -122,7 +113,7 @@ export function NavBar({
         </Group>
       )}
 
-      <div style={{marginBottom: rem("30px")}}></div>
+      <div style={{ marginBottom: rem('30px') }}></div>
 
       <Group className={classes.mobileFooter} w={'100%'} gap={0} hiddenFrom="md">
         {links.map((link) => (
@@ -146,7 +137,14 @@ export function NavBar({
             </Stack>
           </Button>
         ))}
-        <Button h={70} variant="default" onClick={openComicTranslate} flex={1} radius={0}>
+        <Button
+          h={70}
+          variant="default"
+          onClick={openComicTranslate}
+          flex={1}
+          radius={0}
+          loading={comicLoading}
+        >
           <Stack justify="center" align="center" gap={2}>
             <IconAppWindow size={28} stroke={1.5} />
             <Text>Open CT</Text>

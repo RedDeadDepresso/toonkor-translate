@@ -44,15 +44,17 @@ const Browse = () => {
         onSearchChange={onSearchChange}
         delaySearchChange={1000}
       />
-      {loading && <Loader m="auto" color="blue" />}
-      {!loading && manhwaList && <ManhwaCardsGrid data={manhwaList} />}
-      {errorMessage && <Text c="red">{errorMessage}</Text>}
-      {!firstRender && !loading && !manhwaList.length && (
-        <Stack justify='center' align='center' px="2rem">
-          <Title size={64}>¯\_(ツ)_/¯</Title>
-          <Text>No results were found</Text>
-        </Stack>
-      )}
+      <Stack px="2rem">
+        {loading && <Loader m="auto" color="blue" />}
+        {!loading && manhwaList && <ManhwaCardsGrid data={manhwaList} />}
+        {errorMessage && <Text c="red">{errorMessage}</Text>}
+        {!firstRender && !loading && !manhwaList.length && (
+          <Stack justify="center" align="center" px="2rem">
+            <Title size={64}>¯\_(ツ)_/¯</Title>
+            <Text>No results were found</Text>
+          </Stack>
+        )}
+      </Stack>
     </>
   );
 };
