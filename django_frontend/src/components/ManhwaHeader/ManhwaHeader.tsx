@@ -5,7 +5,6 @@ import {
   Group,
   Tooltip,
   Stack,
-  ScrollArea,
   ActionIcon,
   AspectRatio,
   rem,
@@ -117,47 +116,47 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const renderLibraryButton = (state: LibraryButtonState) => {
     if (state === LibraryButtonState.ADDED) 
       return (
-        <Button h={55} leftSection={<IconHeart size={25} />} onClick={removeFromLibrary}>
+        <Button h={55} leftSection={<IconHeart size={25} />} onClick={removeFromLibrary} w={rem("376px")}>
           In Library
         </Button>
       );
     if (state === LibraryButtonState.NOT_ADDED) 
       return (
-        <Button h={55} leftSection={<IconHeart size={25} />} variant="default" onClick={addToLibrary}>
+        <Button h={55} leftSection={<IconHeart size={25} />} variant="default" onClick={addToLibrary}  w={rem("376px")}>
           Add to Library
         </Button>
       );
     return (
-      <Button h={55} loading loaderProps={{ type: 'dots' }} variant="default">
+      <Button h={55} loading loaderProps={{ type: 'dots' }} variant="default"  w={rem("376px")}>
         Loading
       </Button>
     );
   }
 
   return (
-    <ScrollArea h={rem(750)}>
-      <Stack>
+    <div className={classes.inner}>
+      <Stack justify='center' align='center' gap="xl">
         {/* Title Section */}
-        <Title className={classes.title} m="auto">
+        <Title className={classes.title}>
           {title}
         </Title>
 
         {/* Thumbnail Image */}
-        <Image src={manhwaData.thumbnail} className={classes.image} radius="md" m="auto" />
+        <Image src={manhwaData.thumbnail} className={classes.image} radius="md" />
 
         {/* Links Group */}
-        <Group my="md" gap="sm" justify="center">
-          {renderLibraryButton(libraryButtonState)}
+        {renderLibraryButton(libraryButtonState)}
+          <Group gap="sm" justify="center">
           {renderBatotoButton(title)}
           {renderMangadexButton(manhwaData)}
           {renderLinkButton(`${toonkorUrl}${manhwaData.toonkor_id}`, '/images/toonkor-logo.png', 'Open Toonkor URL')}
-        </Group>
+          </Group>
 
         {/* Description Section */}
-        <div className={classes.content}>
+        <div>
           <Markdown>{description}</Markdown>
         </div>
       </Stack>
-    </ScrollArea>
+    </div>
   );
 }

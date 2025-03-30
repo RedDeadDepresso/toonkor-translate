@@ -1,10 +1,13 @@
 .anchor {
     position: fixed;
-    bottom: 45px;
-    right: 25px; 
     cursor: pointer;
     z-index: 1000;
     transition: opacity 0.3s ease;
+    bottom: 90px;
+    right: 25px;
+    @media screen and (min-width: $mantine-breakpoint-md) {
+      bottom: 45px;
+    }
   }
   
 .images {

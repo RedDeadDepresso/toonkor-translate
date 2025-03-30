@@ -36,6 +36,6 @@ export function ManhwaCardsGrid({ data }: ManhwaCardsGridProps) {
   ));
 
   return (
-    <SimpleGrid cols={{ base: 1, md: 4 }}>{cards}</SimpleGrid>
+    <SimpleGrid cols={{ base: 1, md: 3, lg: 4 }} px="2rem">{cards}</SimpleGrid>
   );
 }

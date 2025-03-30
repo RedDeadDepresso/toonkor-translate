@@ -265,7 +265,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
           </Popover.Dropdown>
         </Popover>
       </Group>
-      <ScrollArea h={rem(750)}>
+      <div className={classes.tableContainer}>
         <Table highlightOnHover verticalSpacing="sm" stickyHeader>
           <Table.Thead>
             <Table.Tr>
@@ -283,7 +283,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
           </Table.Thead>
           <Table.Tbody>{rows}</Table.Tbody>
         </Table>
-      </ScrollArea>
+      </div>
     </div>
   );
 };

@@ -1,6 +1,8 @@
 .inner {
-  display: flex;
-  gap: rem(40px);
+  @media screen and (min-width: $mantine-breakpoint-md) {
+    overflow: auto;
+    max-height: 80vh;
+  }
 }
 
 .title {
