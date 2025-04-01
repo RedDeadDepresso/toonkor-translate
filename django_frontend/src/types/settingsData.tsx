@@ -6,12 +6,12 @@ interface SettingsData {
   displayEnglish: boolean;
   toonkorUrl: string;
   read: readData;
-  comicLoading: boolean,
+  comicLoading: boolean;
   setToonkorUrl: (value: string) => void;
   setColorScheme: (value: MantineColorScheme) => void;
   setDisplayEnglish: (value: boolean) => void;
-  setRead: (value: readData) => void
-  setComicLoading: (value: boolean) => void
+  setRead: (value: readData) => void;
+  setComicLoading: (value: boolean) => void;
 }
 
 export default SettingsData;

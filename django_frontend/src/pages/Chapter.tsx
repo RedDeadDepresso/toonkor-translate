@@ -1,15 +1,14 @@
 import { useFetch, useWindowScroll } from '@mantine/hooks';
-import { useParams } from 'react-router-dom';
-import { Stack, Text, Loader, ActionIcon, Title, Group, Button, Anchor, rem } from '@mantine/core';
+import { useParams, Link } from 'react-router-dom';
+import { Stack, Text, Loader, ActionIcon, Title, Group, Button, rem } from '@mantine/core';
 import { IconChevronUp } from '@tabler/icons-react';
+import { useContext, useEffect, useState } from 'react';
 import classes from '@/pages/Chapter.module.css';
 import { NavBar } from '@/components/NavBar/NavBar';
 import MenuLink from '@/components/MenuLinks/MenuLinks';
 import ChapterData from '@/types/chapterData';
 import PaginationData from '@/types/paginationData';
-import { useContext, useEffect, useRef, useState } from 'react';
 import { SettingsContext } from '@/contexts/SettingsContext';
-import { Link } from 'react-router-dom';
 
 const displayTitle = (data: PaginationData, displayEnglish: boolean) => {
   const title = displayEnglish && data.manhwa_en_title ? data.manhwa_en_title : data.manhwa_title;
@@ -29,17 +28,16 @@ const displayTitle = (data: PaginationData, displayEnglish: boolean) => {
 const paginationButton = (buttonText: string, chapterData: ChapterData) => {
   if (!chapterData) {
     return (
-      <Button disabled={true} radius="xl">
+      <Button disabled radius="xl">
         {buttonText}
       </Button>
     );
-  } else {
+  }
     return (
       <MenuLink chapter={chapterData} position="bottom" newTab={false}>
         <Button radius="xl">{buttonText}</Button>
       </MenuLink>
     );
-  }
 };
 
 const paginationButtonGroup = (paginationData: PaginationData) => {
@@ -53,11 +51,9 @@ const paginationButtonGroup = (paginationData: PaginationData) => {
   );
 };
 
-const pages = (pages: string[]) => {
-  return pages.map((pagePath: string) => (
+const pages = (pages: string[]) => pages.map((pagePath: string) => (
     <img src={pagePath} key={pagePath} className={classes.images} />
   ));
-};
 
 const Chapter = () => {
   const { toonkorId, choice } = useParams();
@@ -85,7 +81,7 @@ const Chapter = () => {
   return (
     <>
       {showNav && <NavBar showSearchBar={false} />}
-      {!showNav && <div style={{marginBottom: rem("30px")}}></div>}
+      {!showNav && <div style={{ marginBottom: rem('30px') }}></div>}
       <Stack>
         {!loading && data && displayTitle(data, displayEnglish)}
         {loading && <Loader m="auto" color="blue" />}

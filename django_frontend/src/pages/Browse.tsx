@@ -1,9 +1,9 @@
 import { useState } from 'react';
+import { Loader, Stack, Text, Title } from '@mantine/core';
+import { useIsFirstRender } from '@mantine/hooks';
 import { ManhwaCardsGrid } from '@/components/ManhwaCardsGrid/ManhwaCardsGrid';
 import ManhwaData from '@/types/manhwaData';
-import { Loader, Stack, Text, Title } from '@mantine/core';
 import { NavBar } from '@/components/NavBar/NavBar';
-import { useIsFirstRender } from '@mantine/hooks';
 
 const Browse = () => {
   const firstRender = useIsFirstRender();
@@ -39,7 +39,7 @@ const Browse = () => {
   return (
     <>
       <NavBar
-        showSearchBar={true}
+        showSearchBar
         searchPlaceHolder="Search, Enter Toonkor or Mangadex URL"
         onSearchChange={onSearchChange}
         delaySearchChange={1000}

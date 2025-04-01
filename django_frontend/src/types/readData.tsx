@@ -1,5 +1,5 @@
 interface readData {
-    [key: string]: boolean;
+  [key: string]: boolean;
 }
 
 export default readData;

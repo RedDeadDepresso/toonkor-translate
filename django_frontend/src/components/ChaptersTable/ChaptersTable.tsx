@@ -3,7 +3,6 @@ import { useState, useEffect, useContext } from 'react';
 import {
   Table,
   Checkbox,
-  ScrollArea,
   Group,
   Text,
   rem,
@@ -13,9 +12,9 @@ import {
   Button,
   Center,
 } from '@mantine/core';
+import { IconDownload, IconFilter, IconLanguage, IconTrash, IconWorld } from '@tabler/icons-react';
 import classes from './ChaptersTable.module.css';
 import ChapterData from '@/types/chapterData';
-import { IconDownload, IconFilter, IconLanguage, IconTrash, IconWorld } from '@tabler/icons-react';
 import { SettingsContext } from '@/contexts/SettingsContext';
 import useOpenURL from '@/hooks/useOpenURL';
 
@@ -72,15 +71,16 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
 
   const applyFilters = () => {
     if (filters.downloaded && filters.translated) {
-      setChapters(chapterDataList.filter((chapter) => chapter.download_status === 'READY' && chapter.translation_status === 'READY'));
-    }
-    else if (!filters.downloaded && !filters.translated) {
+      setChapters(
+        chapterDataList.filter(
+          (chapter) => chapter.download_status === 'READY' && chapter.translation_status === 'READY'
+        )
+      );
+    } else if (!filters.downloaded && !filters.translated) {
       setChapters(chapterDataList);
-    }
-    else if (filters.downloaded) {
+    } else if (filters.downloaded) {
       setChapters(chapterDataList.filter((chapter) => chapter.download_status === 'READY'));
-    }
-    else if (filters.translated) {
+    } else if (filters.translated) {
       setChapters(chapterDataList.filter((chapter) => chapter.translation_status === 'READY'));
     }
   };
@@ -99,31 +99,32 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
 
   const sendSelection = (task: 'download' | 'download_translate' | 'remove') => {
     if (selection.length === 0) return;
-    
-    const filteredSelection = task === "remove" ? removeSelection() : selection;
+
+    const filteredSelection = task === 'remove' ? removeSelection() : selection;
     if (socket) {
       socket.send(
         JSON.stringify({
-          task: task,
+          task,
           toonkor_id: `/${toonkorId}`,
           chapters: filteredSelection,
-          remove_choices: removeChoices
+          remove_choices: removeChoices,
         })
       );
     }
-  }
+  };
 
   const removeSelection = () => {
     if (removeChoices.downloaded && removeChoices.translated) {
-      return selection.filter(selected => selected.download_status !== 'LOADING' || selected.translation_status !== 'LOADING');
+      return selection.filter(
+        (selected) =>
+          selected.download_status !== 'LOADING' || selected.translation_status !== 'LOADING'
+      );
+    } if (removeChoices.downloaded) {
+      return selection.filter((selected) => selected.download_status !== 'LOADING');
+    } if (removeChoices.downloaded) {
+      return selection.filter((selected) => selected.translation_status !== 'LOADING');
     }
-    else if (removeChoices.downloaded) {
-      return selection.filter(selected => selected.download_status !== 'LOADING');
-    }
-    else if (removeChoices.downloaded) {
-      return selection.filter(selected => selected.translation_status !== 'LOADING');
-    }
-  }
+  };
 
   const rows = [];
   for (let i = chapters.length - 1; i >= 0; i--) {
@@ -155,7 +156,8 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
               <ActionIcon
                 onClick={(event) => {
                   event.stopPropagation();
-                  openToonkorURL(chapter.toonkor_id, true)}}
+                  openToonkorURL(chapter.toonkor_id, true);
+                }}
               >
                 <IconWorld size={18} stroke={1.5} />
               </ActionIcon>
@@ -163,9 +165,13 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
             <Tooltip label="View Downloaded">
               <ActionIcon
                 variant="light"
-                disabled={chapter.download_status === 'NOT_READY' || chapter.download_status === 'REMOVING'}
-                loading={chapter.download_status === 'LOADING' || chapter.download_status === 'REMOVING'}
-                color={chapter.download_status === "REMOVING" ? 'red' : undefined}
+                disabled={
+                  chapter.download_status === 'NOT_READY' || chapter.download_status === 'REMOVING'
+                }
+                loading={
+                  chapter.download_status === 'LOADING' || chapter.download_status === 'REMOVING'
+                }
+                color={chapter.download_status === 'REMOVING' ? 'red' : undefined}
                 onClick={(event) => {
                   event.stopPropagation();
                   openLocalURL(chapter.toonkor_id, 'downloaded', false);
@@ -177,9 +183,15 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
             <Tooltip label="View Translated">
               <ActionIcon
                 variant="outline"
-                disabled={chapter.translation_status === 'NOT_READY' || chapter.translation_status === 'REMOVING'}
-                loading={chapter.translation_status === 'LOADING' || chapter.translation_status === 'REMOVING'}
-                color={chapter.translation_status === "REMOVING" ? 'red' : undefined}
+                disabled={
+                  chapter.translation_status === 'NOT_READY' ||
+                  chapter.translation_status === 'REMOVING'
+                }
+                loading={
+                  chapter.translation_status === 'LOADING' ||
+                  chapter.translation_status === 'REMOVING'
+                }
+                color={chapter.translation_status === 'REMOVING' ? 'red' : undefined}
                 onClick={(event) => {
                   event.stopPropagation();
                   openLocalURL(chapter.toonkor_id, 'translated', false);
@@ -198,12 +210,12 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
     <div>
       <Group justify="end">
         <Tooltip label="Download">
-          <ActionIcon variant="default" onClick={() => sendSelection("download")}>
+          <ActionIcon variant="default" onClick={() => sendSelection('download')}>
             <IconDownload />
           </ActionIcon>
         </Tooltip>
         <Tooltip label="Download & Translate">
-          <ActionIcon variant="default" onClick={() => sendSelection("download_translate")}>
+          <ActionIcon variant="default" onClick={() => sendSelection('download_translate')}>
             <IconLanguage />
           </ActionIcon>
         </Tooltip>
@@ -232,7 +244,12 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
               }
             />
             <Center>
-              <Button variant='filled' color='red' disabled={!removeChoices.downloaded && !removeChoices.translated} onClick={() => sendSelection("remove")}>
+              <Button
+                variant="filled"
+                color="red"
+                disabled={!removeChoices.downloaded && !removeChoices.translated}
+                onClick={() => sendSelection('remove')}
+              >
                 Remove
               </Button>
             </Center>

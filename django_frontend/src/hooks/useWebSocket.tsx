@@ -10,7 +10,7 @@ const useWebSocket = (url: string | undefined) => {
     const ws = new WebSocket(url);
     setSocket(ws);
 
-    ws.onopen = () => console.log("Connected to server");
+    ws.onopen = () => console.log('Connected to server');
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data).progress;
       const progress = Math.floor((data.current / data.total) * 100);

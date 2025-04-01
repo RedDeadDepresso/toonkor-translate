@@ -1,10 +1,10 @@
 import { Group, TextInput, ActionIcon, rem, Tooltip, Text, Button, Stack } from '@mantine/core';
 import { useDisclosure, useInputState, useMediaQuery } from '@mantine/hooks';
 import { IconSearch, IconSettings, IconAppWindow, IconWorld, IconBooks } from '@tabler/icons-react';
-import classes from './NavBar.module.css';
 import { useNavigate } from 'react-router-dom';
-import SettingsDrawer from '../SettingsDrawer/SettingsDrawer';
 import { useContext, useEffect } from 'react';
+import classes from './NavBar.module.css';
+import SettingsDrawer from '../SettingsDrawer/SettingsDrawer';
 import { SettingsContext } from '@/contexts/SettingsContext';
 import icon from '@/favicon.svg';
 
@@ -115,7 +115,7 @@ export function NavBar({
 
       <div style={{ marginBottom: rem('30px') }}></div>
 
-      <Group className={classes.mobileFooter} w={'100%'} gap={0} hiddenFrom="md">
+      <Group className={classes.mobileFooter} w="100%" gap={0} hiddenFrom="md">
         {links.map((link) => (
           <Button
             h={70}

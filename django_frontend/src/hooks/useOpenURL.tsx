@@ -10,14 +10,17 @@ const useOpenURL = () => {
     const chapterUrl = toonkorUrl + chapterId;
     setRead({ ...read, [chapterId]: true });
     if (newTab) {
-        window.open(chapterUrl, '_blank', 'noreferrer');
-    }
-    else {
+      window.open(chapterUrl, '_blank', 'noreferrer');
+    } else {
       window.location.href = chapterUrl;
     }
-};
+  };
 
-  const openLocalURL = (chapterId: string, choice: 'downloaded' | 'translated', newTab: boolean) => {
+  const openLocalURL = (
+    chapterId: string,
+    choice: 'downloaded' | 'translated',
+    newTab: boolean
+  ) => {
     const chapterUrl = `/chapter${chapterId}/${choice}`;
     setRead({ ...read, [chapterId]: true });
 
@@ -28,7 +31,7 @@ const useOpenURL = () => {
     }
   };
 
-  return {openLocalURL, openToonkorURL};
+  return { openLocalURL, openToonkorURL };
 };
 
 export default useOpenURL;

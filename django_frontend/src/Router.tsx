@@ -4,7 +4,6 @@ import Browse from './pages/Browse';
 import Manhwa from './pages/Manhwa';
 import Chapter from './pages/Chapter';
 
-
 const router = createBrowserRouter([
   {
     path: '/',
@@ -17,7 +16,7 @@ const router = createBrowserRouter([
   {
     path: '/chapter/:toonkorId/:choice',
     element: <Chapter />,
-  },  
+  },
   {
     path: '/library',
     element: <Library />,
