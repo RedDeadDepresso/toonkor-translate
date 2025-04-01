@@ -1,7 +1,7 @@
 import base64
 import re
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 from bs4 import BeautifulSoup
 import requests
 import re
@@ -14,28 +14,18 @@ from django_backend.schemas import ManhwaSchema
 
 class ToonkorAPI:
     def __init__(self):
-        self.telegram_url = "https://t.me/s/new_toonkor"
         self.client = requests.Session()
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
         }
-        toonkor_settings, created = ToonkorSettings.objects.get_or_create(name="general")
+        toonkor_settings, created = ToonkorSettings.objects.get_or_create(name="main")
         self.base_url = toonkor_settings.url
-
-    # Settings
-    def fetch_toonkor_url(self):
-        response = self.client.get(self.telegram_url, headers=self.headers)
-        soup = BeautifulSoup(response.text, "lxml")
-        a_tags = soup.select("div.tgme_widget_message_text.js-message_text > a")
-        for a_tag in reversed(a_tags):
-            if "toonkor" in a_tag.text:
-                return a_tag.text
             
     def set_toonkor_url(self, url: str):
         response = self.client.get(url, headers=self.headers)
         if response.status_code == 200:
             toonkor_api.base_url = url
-            toonkor_settings, created = ToonkorSettings.objects.get_or_create(name="general")
+            toonkor_settings, created = ToonkorSettings.objects.get_or_create(name="main")
             toonkor_settings.url = url
             toonkor_settings.save()
             return True
@@ -152,13 +142,18 @@ class ToonkorAPI:
         thumbnail_url = document.select_one("td.bt_thumb img")["src"]
 
         chapters = []
+        new_chapters = []
         chapter_slug = toonkor_id.replace('-', '_')
         chapter_elm_list = document.select(self.chapter_list_selector())
 
         for index, chapter_elm in enumerate(reversed(chapter_elm_list)):
             chapter_dict = self.chapter_from_element(chapter_elm)
+
             if index in chapters_db:
                 chapter_dict.update(chapters_db[index])
+            else:
+                new_chapters.append(chapter_dict)
+
             if not chapter_dict['toonkor_id']:
                 chapter_dict['toonkor_id'] = f'{chapter_slug}_{index}화.html`'
 
@@ -171,15 +166,14 @@ class ToonkorAPI:
             "description": description,
             "thumbnail": f"{self.base_url}/{thumbnail_url}",
             "chapters": chapters,
-        }
+            "toonkor_id": toonkor_id
+        }, new_chapters
 
-    def get_manga_details(self, toonkor_id: str, chapters_db=dict()) -> ManhwaSchema:
+    def get_manga_details(self, toonkor_id: str, chapters_db = dict()) -> ManhwaSchema:
         manga_url = f"{self.base_url}{toonkor_id}"
         response = self.client.get(manga_url, headers=self.headers)
         soup = BeautifulSoup(response.text, "lxml")
-        details = self.manga_details_parse(soup, toonkor_id, chapters_db)
-        details["toonkor_id"] = toonkor_id
-        return details
+        return self.manga_details_parse(soup, toonkor_id, chapters_db)
 
     # Chapters
     def chapter_list_selector(self) -> str:
@@ -191,7 +185,6 @@ class ToonkorAPI:
         toonkor_id = content_title.get('data-role', '')
         return {
             "date_upload": date_upload,
-            "status": "On Toonkor",
             "toonkor_id": toonkor_id
         }
 

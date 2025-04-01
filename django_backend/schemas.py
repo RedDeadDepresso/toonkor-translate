@@ -5,7 +5,7 @@ from typing import Literal
 class ChapterSchema(Schema):
     index: str | int
     date_upload: str = ""
-    toonkor_id: str = ''
+    toonkor_id: str = ""
 
     download_status: Literal['NOT_READY', 'LOADING', 'READY', 'REMOVING'] = 'NOT_READY'
     translation_status: Literal['NOT_READY', 'LOADING', 'READY', 'REMOVING'] = 'NOT_READY'
@@ -41,8 +41,8 @@ class SetToonkorUrlSchema(Schema):
 
 
 class ResponseToonkorUrlSchema(Schema):
-    url: str
-    error: str
+    url: str = ""
+    error: str = ""
 
 
 class DownloadTranslateSchema(Schema):

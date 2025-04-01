@@ -3,6 +3,17 @@ import os
 
 from django.db import models
 from functools import cached_property
+from django.utils import timezone
+
+
+_start_time = timezone.now()
+
+def get_start_time():
+    return _start_time
+
+def reset_start_time():
+    global _start_time
+    _start_time = timezone.now()
 
 
 def encode_name(name: str):
@@ -25,6 +36,9 @@ class Manhwa(models.Model):
     thumbnail = models.ImageField(blank=True)
     mangadex_id = models.CharField(max_length=512, blank=True)
     toonkor_id = models.SlugField(default="")
+
+    in_library = models.BooleanField(default=True)
+    last_update = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
         return self.title
@@ -49,19 +63,22 @@ class Chapter(models.Model):
     index = models.IntegerField()
     toonkor_id = models.SlugField(default="")
     date_upload = models.CharField(max_length=512, blank=True)
-    manhwa_id = models.CharField(max_length=512)
+    manhwa = models.ForeignKey(Manhwa, on_delete=models.CASCADE)
 
     download_status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.NOT_READY)
     translation_status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.NOT_READY)
 
     image_extensions = {'.png', '.jpeg', '.jpg', '.webp', '.gif', '.svg'}
 
+    class Meta:
+        ordering = ["index"]
+
     def __str__(self) -> str:
-        return f"{self.manhwa_id} - Chapter {self.index}"
+        return f"{self.manhwa} - Chapter {self.index}"
     
     @cached_property
     def manhwa_media_path(self) -> str:
-        return f"/media/{encode_name(self.manhwa_id)}"
+        return f"/media/{encode_name(self.manhwa.toonkor_id)}"
     
     @cached_property
     def manhwa_path(self) -> str:
@@ -90,12 +107,31 @@ class Chapter(models.Model):
             return True
         return False
     
+    def pages(self, pages_path):
+        pages = []
+        if os.path.isdir(pages_path):
+            pages = [
+                os.path.join(pages_path, file)
+                for file in os.listdir(pages_path)
+                if self.is_page(file)
+            ]
+            pages.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+        return pages
+    
     def media_pages(self, pages_path: str, media_pages_path: str) -> list[str]:
         pages = []
         if os.path.isdir(pages_path):
             pages = [f'{media_pages_path}/{file}' for file in os.listdir(pages_path) if self.is_page(file)] 
             pages.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
         return pages
+    
+    @property
+    def download_pages(self) -> list[str]:
+        return self.pages(self.downloaded_path)
+    
+    @property
+    def translation_pages(self) -> list[str]:
+        return self.pages(self.translated_path)
 
     @property
     def media_download_pages(self) -> list[str]:
@@ -139,4 +175,4 @@ class Chapter(models.Model):
 
 class ToonkorSettings(models.Model):
     name = models.CharField(max_length=512)
-    url = models.URLField(default="https://toonkor434.com")
+    url = models.URLField(default="https://tkor08.com")

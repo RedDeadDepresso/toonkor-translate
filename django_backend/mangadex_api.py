@@ -10,7 +10,6 @@ class MangadexAPI:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
         }
         self.base_url = "https://api.mangadex.org"
-        self.cached_manhwas = {}
 
     def extract_response(self, response):
         output = []
@@ -37,17 +36,12 @@ class MangadexAPI:
                         "mangadex_id": result["id"]
                     }
 
-                    # Cache the title and add it to the output list
-                    self.cached_manhwas[korean_title] = temp
                     output.append(temp)
                     break  # Exit after finding the first Korean title
 
         return output
 
     def search(self, query: str) -> list[ManhwaSchema]:
-        if query in self.cached_manhwas:
-            return [self.cached_manhwas[query]]
-
         response = self.client.get(
             f"{self.base_url}/manga", params={"title": query}, headers=self.headers
         )
@@ -61,18 +55,15 @@ class MangadexAPI:
      
     def update_toonkor_search(self, toonkor_search: dict) -> ManhwaSchema:
         korean_title = toonkor_search["title"]
-        if korean_title in self.cached_manhwas:
-            toonkor_search.update(self.cached_manhwas[korean_title])
 
-        else:
-            response = self.client.get(
-                f"{self.base_url}/manga",
-                params={"title": korean_title},
-                headers=self.headers,
-            )
-            results = self.extract_response(response)
-            if results:
-                toonkor_search.update(results[0])
+        response = self.client.get(
+            f"{self.base_url}/manga",
+            params={"title": korean_title},
+            headers=self.headers,
+        )
+        results = self.extract_response(response)
+        if results:
+            toonkor_search.update(results[0])
 
         return toonkor_search
 

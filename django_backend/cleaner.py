@@ -2,10 +2,9 @@ import asyncio
 import threading
 
 from asgiref.sync import sync_to_async
-from django_backend.api import update_cached_chapter
 from collections import deque
 from channels.layers import get_channel_layer
-from django_backend.models import Chapter
+from django_backend.models import Chapter, StatusChoices
 
 
 class Cleaner:
@@ -43,13 +42,11 @@ class Cleaner:
         )
         if remove_choices["downloaded"]:
             chapter_obj.delete_download(save=False)
-            chapter['download_status'] = "NOT_READY"
-            update_cached_chapter(manhwa_id, chapter['index'], "download_status", "NOT_READY")
+            chapter['download_status'] = StatusChoices.NOT_READY.value
 
         if remove_choices["translated"]:
             chapter_obj.delete_translation(save=False)
-            chapter['translation_status'] = "NOT_READY"
-            update_cached_chapter(manhwa_id, chapter['index'], "translation_status", "NOT_READY")
+            chapter['translation_status'] = StatusChoices.NOT_READY.value
             
         await sync_to_async(chapter_obj.save)()
         await self._send_progress(group_name, [chapter], {})

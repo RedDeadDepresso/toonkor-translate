@@ -7,61 +7,12 @@ from pipeline import *
 from PySide6.QtCore import QUrl
 from PySide6.QtWebSockets import QWebSocket
 from typing import Union
+import django
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_project.settings")
+django.setup()
 
-class Manhwa:
-    def __init__(self, name) -> None:
-        self.name: str = name
-        self.chapters_dict: dict[str, dict[str, Union[set[str], bool]]] = {}
-        self.progress = {'current': 0, 'total': 0}
-
-    @property
-    def progress_current(self) -> int:
-        return self.progress['current']
-    
-    @progress_current.setter
-    def progress_current(self, value: int):
-        self.progress['current'] = value
-    
-    @property
-    def progress_total(self) -> int:
-        return self.progress['total']
-
-    @progress_total.setter
-    def progress_total(self, value: int):
-        self.progress['total'] = value
-
-    def get_page_paths(self, chapter: str) -> set[str]:
-        info = self.chapters_dict.setdefault(chapter, {'page_paths': set(), 'translated': False})
-        return info['page_paths']
-
-    def is_translated(self, chapter: str) -> bool:
-        info = self.chapters_dict.setdefault(chapter, {'page_paths': set(), 'translated': False})
-        return info['translated']
-    
-    def get_chapter(self, chapter: str) -> tuple[set[str], bool]:
-        info = self.chapters_dict.setdefault(chapter, {'page_paths': set(), 'translated': False})
-        return info['page_paths'], info['translated']
-
-    def update_chapter(self, chapter: str, page_paths: set[str] = None, translated: bool = None):
-        info = self.chapters_dict.setdefault(chapter, {'page_paths': set(), 'translated': False})
-        if page_paths is not None:
-            info['page_paths'].update(page_paths)
-        if translated is not None:
-            info['translated'] = translated
-
-    def remove_chapter(self, chapter):
-        self.chapters_dict.pop(chapter, None)
-
-    def update_progress(self) -> dict:
-        self.progress_current = len([x for x in self.chapters_dict.values() if x['translated']])
-        self.progress_total = len(self.chapters_dict)
-        return self.progress
-    
-    def next_chapter(self):
-        for index in self.chapters_dict:
-            return self, index
-        return None
+from django_backend.models import Chapter, StatusChoices
 
 
 class ManhwaFileHandler(FileHandler):
@@ -389,14 +340,14 @@ class ComicTranslateDjango(ComicTranslate):
         super(ComicTranslateDjango, self).__init__(parent)
         self.file_handler = ManhwaFileHandler()
         self.pipeline = ManhwaPipeline(self)
-        self.translation_queue: dict[str, Manhwa] = dict()
+        self.current_chaper: Chapter | None = None
 
         self.websocket = QWebSocket()
         self.websocket.connected.connect(self.on_connected)
         self.websocket.disconnected.connect(self.on_disconnected)
-        self.websocket.textMessageReceived.connect(self.receive_message)
+        self.websocket.textMessageReceived.connect(self.translate_chapter)
         self.ready_event = ready_event
-
+        
         self.connect_to_server()
 
     def connect_to_server(self):
@@ -410,33 +361,15 @@ class ComicTranslateDjango(ComicTranslate):
     def on_disconnected(self):
         print("ComicTranslate disconnected from WebSocket server")
 
-    def receive_message(self, message):
-        data = json.loads(message)
-        restart =  len(self.translation_queue) == 0
-        for toonkor_id, chapters in data.items():
-            manhwa = self.translation_queue.setdefault(toonkor_id, Manhwa(toonkor_id))
-            for chapter, details in chapters.items():
-                page_paths = details['page_paths']
-                manhwa.update_chapter(chapter, page_paths=page_paths)
-        if restart:
-            self.next_manhwa()
+    def translate_chapter(self, message=None):
+        if not self.current_chaper:
+            self.current_chaper = Chapter.objects.filter(download_status=StatusChoices.READY, translation_status=StatusChoices.LOADING).first()
 
-    def next_manhwa(self):
-        for manhwa in self.translation_queue.values():
-            next_chapter = manhwa.next_chapter()
-            if next_chapter is not None:
-                self.translate_chapter(*next_chapter)
+        if self.current_chaper:
+            self.run_threaded(self.load_initial_image, self.start_chapter_translate, self.default_error_handler, None, self.current_chaper.download_pages)
 
-    def translate_chapter(self, manhwa: Manhwa, chapter: str):
-        page_paths, translated = manhwa.get_chapter(chapter)
-        if translated:
-            self.send_progress(manhwa, chapter)
-        else:
-            start_chapter_translate = lambda x=manhwa, y=chapter: self.start_chapter_translate(x, y)
-            result_callback = lambda x: (self.on_initial_image_loaded(x), start_chapter_translate())
-            self.run_threaded(self.load_initial_image, result_callback, self.default_error_handler, None, page_paths)
-
-    def start_chapter_translate(self, manhwa: Manhwa, chapter: str):
+    def start_chapter_translate(self, cv2_image):
+        self.on_initial_image_loaded(cv2_image)
         for image_path in self.image_files:
             source_lang = self.image_states[image_path]['source_lang']
             target_lang = self.image_states[image_path]['target_lang']
@@ -447,26 +380,22 @@ class ComicTranslateDjango(ComicTranslate):
         self.batch_mode_selected()
         self.translate_button.setEnabled(False)
         self.progress_bar.setVisible(True)
-        finished_callback = lambda x=manhwa, y=chapter: self.on_chapter_translate_finished(x, y)
-        self.run_threaded(self.pipeline.batch_process, None, self.default_error_handler, finished_callback)
+        self.run_threaded(self.pipeline.batch_process, None, self.default_error_handler, self.on_chapter_translate_finished())
 
-    def send_progress(self, manhwa: Manhwa, chapter: str):
-        manhwa.update_chapter(chapter, translated=True)
-        progress = manhwa.update_progress()
+    def send_progress(self):
         reply = json.dumps({'task': 'download_translate', 
-                            'toonkor_id': manhwa.name, 
-                            'chapter': chapter, 
-                            'progress': progress})
+                            'toonkor_id': self.current_chaper.manhwa_id, 
+                            'chapter': self.current_chaper.index})
         self.websocket.sendTextMessage(reply)
 
-    def on_chapter_translate_finished(self, manhwa: Manhwa, chapter: str):
+    def on_chapter_translate_finished(self):
         self.progress_bar.setVisible(False)
         self.translate_button.setEnabled(True)
-        self.send_progress(manhwa, chapter)
-        manhwa.remove_chapter(chapter)
-        if len(manhwa.chapters_dict) == 0:
-            self.translation_queue.pop(manhwa.name, None)
-        self.next_manhwa()
+        self.current_chaper.translation_status = StatusChoices.READY
+        self.current_chaper.save()
+        self.send_progress()
+        self.current_chaper = None
+        self.translate_chapter()
 
 
 def run_comic_translate(ready_event):

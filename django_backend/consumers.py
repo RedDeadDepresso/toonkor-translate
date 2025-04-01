@@ -6,7 +6,6 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from django_backend.cleaner import cleaner
 from django_backend.downloader import downloader
 from django_backend.models import Chapter, StatusChoices, encode_name
-from django_backend.api import update_cached_chapter
 
 
 class QtConsumer(AsyncWebsocketConsumer):
@@ -49,19 +48,13 @@ class QtConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         toonkor_id = data["toonkor_id"]
         chapter = int(data["chapter"])
-        chapter_obj = await sync_to_async(Chapter.objects.get)(
-            manhwa_id=toonkor_id, index=chapter
-        )
-        chapter_obj.translation_status = StatusChoices.READY
-        await sync_to_async(chapter_obj.save)()
-        update_cached_chapter(toonkor_id, chapter, 'translation_status', 'READY')
         group = f"download_translate_{encode_name(toonkor_id)}" 
         await self.channel_layer.group_send(
             group,
             {
                 "type": "send_progress",
                 "chapters": [{"index": chapter, "status": "Translated"}],
-                "progress": data["progress"],
+                "progress": {},
             },
         )
 
@@ -117,11 +110,9 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
     async def run_download_translate(self, task, chapters):
         progress = {"current": 0, "total": len(chapters)}
         for chapter in chapters:
-            chapter['download_status'] = 'LOADING'
-            update_cached_chapter(self.manhwa_id, chapter['index'], 'download_status', 'LOADING')
+            chapter['download_status'] = StatusChoices.LOADING.value
             if task == 'download_translate':
-                chapter['translation_status'] = 'LOADING'
-                update_cached_chapter(self.manhwa_id, chapter['index'], 'translation_status', 'LOADING')
+                chapter['translation_status'] = StatusChoices.LOADING.value
 
         await self.channel_layer.group_send(
             self.group_name,
@@ -136,12 +127,10 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
     async def run_remove(self, chapters, remove_choices):
         for chapter in chapters:
             if remove_choices["downloaded"]:
-                chapter['download_status'] = 'REMOVING'
-                update_cached_chapter(self.manhwa_id, chapter['index'], 'download_status', 'REMOVING')
+                chapter['download_status'] = StatusChoices.REMOVING.value
 
             if remove_choices['translated']:
-                chapter['translation_status'] = 'REMOVING'        
-                update_cached_chapter(self.manhwa_id, chapter['index'], 'remove_status', 'REMOVING')
+                chapter['translation_status'] = StatusChoices.REMOVING.value
 
         await self.channel_layer.group_send(
             self.group_name,

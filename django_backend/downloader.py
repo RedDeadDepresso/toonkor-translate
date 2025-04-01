@@ -4,7 +4,7 @@ import threading
 from collections import deque
 from channels.layers import get_channel_layer
 from asgiref.sync import sync_to_async
-from django_backend.api import update_cached_chapter, start_comic_proc
+from django_backend.api import start_comic_proc
 from django_backend.models import Chapter, StatusChoices
 from django_backend.toonkor_api import toonkor_api
 
@@ -58,8 +58,7 @@ class Downloader:
                     chapter_obj.download_status = StatusChoices.READY
                     await sync_to_async(chapter_obj.save)()
 
-                    chapter['download_status'] = 'READY'
-                    update_cached_chapter(manhwa_id, chapter['index'], "download_status", 'READY')
+                    chapter['download_status'] = StatusChoices.READY.value
 
                     # Send progress update
                     await self._send_progress(group_name, [chapter], progress)
