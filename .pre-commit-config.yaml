@@ -3,6 +3,6 @@ repos:
     rev: v0.3.4  # Use the latest version
     hooks:
       - id: ruff
-        args: ["django_backend", "django_project"]  # Specify directories to check
+        args: ["--fix", "django_backend", "django_project"]  # Specify directories to check
       - id: ruff-format
         args: ["django_backend", "django_project"]  # Specify directories to check
