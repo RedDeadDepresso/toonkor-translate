@@ -14,10 +14,10 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-TEMPLATE_DIR = BASE_DIR.joinpath('django_backend', 'templates')
-STATIC_DIR = BASE_DIR.joinpath('django_backend', 'static')
-MEDIA_DIR = BASE_DIR.joinpath('django_backend', 'media')
-REACT_APP_BUILD_PATH = BASE_DIR.joinpath('django_frontend', 'dist')
+TEMPLATE_DIR = BASE_DIR.joinpath("django_backend", "templates")
+STATIC_DIR = BASE_DIR.joinpath("django_backend", "static")
+MEDIA_DIR = BASE_DIR.joinpath("django_backend", "media")
+REACT_APP_BUILD_PATH = BASE_DIR.joinpath("django_frontend", "dist")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -28,7 +28,7 @@ SECRET_KEY = "django-insecure-g17yw$_3qg$!-gm$v)7zygdps@om#pp!#&4@$ag^b@n*w-7*++
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.64']
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.1.64"]
 
 
 # Application definition
@@ -36,14 +36,12 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.64']
 INSTALLED_APPS = [
     "channels",
     "corsheaders",
-    
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     "ninja",
     "django_backend",
 ]
@@ -72,13 +70,13 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                'django.template.context_processors.media', 
+                "django.template.context_processors.media",
             ],
         },
     },
 ]
 
-ASGI_APPLICATION = 'django_project.asgi.application'
+ASGI_APPLICATION = "django_project.asgi.application"
 
 CHANNEL_LAYERS = {
     "default": {
@@ -132,7 +130,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'django_static/'
+STATIC_URL = "django_static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

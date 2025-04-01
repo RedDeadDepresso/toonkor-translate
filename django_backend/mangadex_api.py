@@ -1,5 +1,7 @@
-import requests
 import concurrent.futures
+
+import requests
+
 from django_backend.schemas import ManhwaSchema
 
 
@@ -32,8 +34,10 @@ class MangadexAPI:
                     temp = {
                         "title": korean_title,
                         "en_title": result["attributes"]["title"].get("en", ""),
-                        "en_description": result["attributes"]["description"].get("en", ""),
-                        "mangadex_id": result["id"]
+                        "en_description": result["attributes"]["description"].get(
+                            "en", ""
+                        ),
+                        "mangadex_id": result["id"],
                     }
 
                     output.append(temp)
@@ -46,13 +50,11 @@ class MangadexAPI:
             f"{self.base_url}/manga", params={"title": query}, headers=self.headers
         )
         return self.extract_response(response)
-    
+
     def search_by_id(self, id: str) -> list[ManhwaSchema]:
-        response = self.client.get(
-            f"{self.base_url}/manga/{id}", headers=self.headers
-        )
+        response = self.client.get(f"{self.base_url}/manga/{id}", headers=self.headers)
         return self.extract_response(response)
-     
+
     def update_toonkor_search(self, toonkor_search: dict) -> ManhwaSchema:
         korean_title = toonkor_search["title"]
 

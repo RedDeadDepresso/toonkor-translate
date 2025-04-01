@@ -1,15 +1,17 @@
 import base64
 import os
+from functools import cached_property
 
 from django.db import models
-from functools import cached_property
 from django.utils import timezone
 
 
 _start_time = timezone.now()
 
+
 def get_start_time():
     return _start_time
+
 
 def reset_start_time():
     global _start_time
@@ -46,7 +48,7 @@ class Manhwa(models.Model):
     @cached_property
     def media_path(self) -> str:
         return f"/media/{encode_name(self.toonkor_id)}"
-    
+
     @cached_property
     def path(self) -> str:
         return f"django_backend{self.media_path}"
@@ -65,21 +67,25 @@ class Chapter(models.Model):
     date_upload = models.CharField(max_length=512, blank=True)
     manhwa = models.ForeignKey(Manhwa, on_delete=models.CASCADE)
 
-    download_status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.NOT_READY)
-    translation_status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.NOT_READY)
+    download_status = models.CharField(
+        max_length=20, choices=StatusChoices.choices, default=StatusChoices.NOT_READY
+    )
+    translation_status = models.CharField(
+        max_length=20, choices=StatusChoices.choices, default=StatusChoices.NOT_READY
+    )
 
-    image_extensions = {'.png', '.jpeg', '.jpg', '.webp', '.gif', '.svg'}
+    image_extensions = {".png", ".jpeg", ".jpg", ".webp", ".gif", ".svg"}
 
     class Meta:
         ordering = ["index"]
 
     def __str__(self) -> str:
         return f"{self.manhwa} - Chapter {self.index}"
-    
+
     @cached_property
     def manhwa_media_path(self) -> str:
         return f"/media/{encode_name(self.manhwa.toonkor_id)}"
-    
+
     @cached_property
     def manhwa_path(self) -> str:
         return f"django_backend{self.manhwa_media_path}"
@@ -91,7 +97,7 @@ class Chapter(models.Model):
     @cached_property
     def translated_path(self) -> str:
         return f"{self.manhwa_path}/{self.index}/translated"
-    
+
     @cached_property
     def media_downloaded_path(self) -> str:
         return f"{self.manhwa_media_path}/{self.index}"
@@ -99,14 +105,14 @@ class Chapter(models.Model):
     @cached_property
     def media_translated_path(self) -> str:
         return f"{self.manhwa_media_path}/{self.index}/translated"
-    
+
     @classmethod
     def is_page(cls, file: str):
         name, extension = os.path.splitext(file)
         if name.isdigit() and extension in cls.image_extensions:
             return True
         return False
-    
+
     def pages(self, pages_path):
         pages = []
         if os.path.isdir(pages_path):
@@ -117,18 +123,22 @@ class Chapter(models.Model):
             ]
             pages.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
         return pages
-    
+
     def media_pages(self, pages_path: str, media_pages_path: str) -> list[str]:
         pages = []
         if os.path.isdir(pages_path):
-            pages = [f'{media_pages_path}/{file}' for file in os.listdir(pages_path) if self.is_page(file)] 
+            pages = [
+                f"{media_pages_path}/{file}"
+                for file in os.listdir(pages_path)
+                if self.is_page(file)
+            ]
             pages.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
         return pages
-    
+
     @property
     def download_pages(self) -> list[str]:
         return self.pages(self.downloaded_path)
-    
+
     @property
     def translation_pages(self) -> list[str]:
         return self.pages(self.translated_path)
@@ -140,12 +150,12 @@ class Chapter(models.Model):
     @property
     def media_translation_pages(self) -> list[str]:
         return self.media_pages(self.translated_path, self.media_translated_path)
-    
+
     def delete_pages(self, folder_path) -> bool:
         try:
             if not os.path.isdir(folder_path):
                 return False
-            
+
             for file in os.listdir(folder_path):
                 if self.is_page(file):
                     os.remove(os.path.join(folder_path, file))
@@ -171,7 +181,7 @@ class Chapter(models.Model):
                 self.save()
             return True
         return False
-    
+
 
 class ToonkorSettings(models.Model):
     name = models.CharField(max_length=512)

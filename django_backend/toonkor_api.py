@@ -1,13 +1,14 @@
 import base64
+import concurrent.futures
+import os
 import re
 from datetime import datetime
 from typing import List
-from bs4 import BeautifulSoup
+
 import requests
-import re
-import os
-import concurrent.futures
+from bs4 import BeautifulSoup
 from django.utils.timesince import timesince
+
 from django_backend.models import ToonkorSettings, encode_name
 from django_backend.schemas import ManhwaSchema
 
@@ -20,12 +21,14 @@ class ToonkorAPI:
         }
         toonkor_settings, created = ToonkorSettings.objects.get_or_create(name="main")
         self.base_url = toonkor_settings.url
-            
+
     def set_toonkor_url(self, url: str):
         response = self.client.get(url, headers=self.headers)
         if response.status_code == 200:
             toonkor_api.base_url = url
-            toonkor_settings, created = ToonkorSettings.objects.get_or_create(name="main")
+            toonkor_settings, created = ToonkorSettings.objects.get_or_create(
+                name="main"
+            )
             toonkor_settings.url = url
             toonkor_settings.save()
             return True
@@ -45,7 +48,11 @@ class ToonkorAPI:
         toonkor_id = element.select_one("div.section-item-title a")["href"]
         thumbnail_url = element.select_one("img")["src"]
 
-        return {"title": title_element.text, "toonkor_id": toonkor_id, "thumbnail": thumbnail_url}
+        return {
+            "title": title_element.text,
+            "toonkor_id": toonkor_id,
+            "thumbnail": thumbnail_url,
+        }
 
     latest_request_modifier = "?fil=%EC%B5%9C%EC%8B%A0"
 
@@ -81,7 +88,7 @@ class ToonkorAPI:
 
     def search_manga_from_element(self, element) -> dict:
         return self.popular_manga_from_element(element)
-    
+
     def search(self, query: str):
         filters = {
             "type": "/%EB%8B%A8%ED%96%89%EB%B3%B8",  # Optional: specify type (e.g., "Manga")
@@ -143,7 +150,7 @@ class ToonkorAPI:
 
         chapters = []
         new_chapters = []
-        chapter_slug = toonkor_id.replace('-', '_')
+        chapter_slug = toonkor_id.replace("-", "_")
         chapter_elm_list = document.select(self.chapter_list_selector())
 
         for index, chapter_elm in enumerate(reversed(chapter_elm_list)):
@@ -154,8 +161,8 @@ class ToonkorAPI:
             else:
                 new_chapters.append(chapter_dict)
 
-            if not chapter_dict['toonkor_id']:
-                chapter_dict['toonkor_id'] = f'{chapter_slug}_{index}화.html`'
+            if not chapter_dict["toonkor_id"]:
+                chapter_dict["toonkor_id"] = f"{chapter_slug}_{index}화.html`"
 
             chapter_dict["index"] = index
             chapters.append(chapter_dict)
@@ -166,10 +173,10 @@ class ToonkorAPI:
             "description": description,
             "thumbnail": f"{self.base_url}/{thumbnail_url}",
             "chapters": chapters,
-            "toonkor_id": toonkor_id
+            "toonkor_id": toonkor_id,
         }, new_chapters
 
-    def get_manga_details(self, toonkor_id: str, chapters_db = dict()) -> ManhwaSchema:
+    def get_manga_details(self, toonkor_id: str, chapters_db=dict()) -> ManhwaSchema:
         manga_url = f"{self.base_url}{toonkor_id}"
         response = self.client.get(manga_url, headers=self.headers)
         soup = BeautifulSoup(response.text, "lxml")
@@ -182,11 +189,8 @@ class ToonkorAPI:
     def chapter_from_element(self, element) -> dict:
         content_title = element.select_one("td.content__title")
         date_upload = self.to_date(element.select_one("td.episode__index").text)
-        toonkor_id = content_title.get('data-role', '')
-        return {
-            "date_upload": date_upload,
-            "toonkor_id": toonkor_id
-        }
+        toonkor_id = content_title.get("data-role", "")
+        return {"date_upload": date_upload, "toonkor_id": toonkor_id}
 
     @staticmethod
     def to_date(date_str: str) -> int:
@@ -250,7 +254,9 @@ class ToonkorAPI:
     ) -> str:
         with requests.get(page_url, stream=True) as response:
             _, extension = os.path.splitext(page_url)
-            img_path = os.path.abspath(f"{manhwa_path}/{chapter_index}/{page_index}{extension}")
+            img_path = os.path.abspath(
+                f"{manhwa_path}/{chapter_index}/{page_index}{extension}"
+            )
             if not os.path.exists(img_path):
                 with open(img_path, "wb") as out_file:
                     out_file.write(response.content)
@@ -263,13 +269,17 @@ class ToonkorAPI:
             os.makedirs(f"{manhwa_path}/{chapter_dict['index']}", exist_ok=True)
 
             # Get chapter details
-            page_list = self.get_page_list(chapter_dict['toonkor_id'])
+            page_list = self.get_page_list(chapter_dict["toonkor_id"])
 
             # Download all pages concurrently
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures = [
                     executor.submit(
-                        self.download_page, manhwa_path, chapter_dict["index"], page["index"], page["url"]
+                        self.download_page,
+                        manhwa_path,
+                        chapter_dict["index"],
+                        page["index"],
+                        page["url"],
                     )
                     for page in page_list
                 ]
@@ -281,7 +291,9 @@ class ToonkorAPI:
             return list(page_paths)
 
         except Exception as e:
-            print(f"Error downloading chapter {chapter_dict['index'] + 1} of {manhwa_id}: {str(e)}")
+            print(
+                f"Error downloading chapter {chapter_dict['index'] + 1} of {manhwa_id}: {str(e)}"
+            )
             return None
 
 

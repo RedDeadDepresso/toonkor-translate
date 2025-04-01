@@ -1,5 +1,6 @@
-from ninja import Schema
 from typing import Literal
+
+from ninja import Schema
 
 
 class ChapterSchema(Schema):
@@ -7,8 +8,10 @@ class ChapterSchema(Schema):
     date_upload: str = ""
     toonkor_id: str = ""
 
-    download_status: Literal['NOT_READY', 'LOADING', 'READY', 'REMOVING'] = 'NOT_READY'
-    translation_status: Literal['NOT_READY', 'LOADING', 'READY', 'REMOVING'] = 'NOT_READY'
+    download_status: Literal["NOT_READY", "LOADING", "READY", "REMOVING"] = "NOT_READY"
+    translation_status: Literal["NOT_READY", "LOADING", "READY", "REMOVING"] = (
+        "NOT_READY"
+    )
 
 
 class ManhwaSchema(Schema):
@@ -33,7 +36,7 @@ class ChapterPaginationSchema(Schema):
     prev_chapter: ChapterSchema | None = None
     current_chapter: ChapterSchema
     next_chapter: ChapterSchema | None = None
-    pages: list[str] 
+    pages: list[str]
 
 
 class SetToonkorUrlSchema(Schema):

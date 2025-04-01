@@ -1,5 +1,7 @@
 from django.contrib import admin
-from django_backend.models import Manhwa, Chapter
+
+from django_backend.models import Chapter, Manhwa
+
 
 # Register your models here.
 

@@ -37,3 +37,5 @@ typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.3
 zope.interface==7.0.3
+ruff==0.11.2
+pre_commit==4.1.0

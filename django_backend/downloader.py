@@ -1,9 +1,10 @@
 import asyncio
 import threading
-
 from collections import deque
-from channels.layers import get_channel_layer
+
 from asgiref.sync import sync_to_async
+from channels.layers import get_channel_layer
+
 from django_backend.api import start_comic_proc
 from django_backend.models import Chapter, StatusChoices
 from django_backend.toonkor_api import toonkor_api
@@ -31,7 +32,9 @@ class Downloader:
             try:
                 # Get the next task from the queue
                 manhwa_id, group_name, task, chapters = self._queue.popleft()
-                asyncio.run(self._download_chapters(manhwa_id, group_name, task, chapters))
+                asyncio.run(
+                    self._download_chapters(manhwa_id, group_name, task, chapters)
+                )
 
             except Exception as e:
                 print(f"Error processing task: {e}")
@@ -42,7 +45,7 @@ class Downloader:
 
         try:
             for chapter in chapters:
-                chapter_index: int = chapter['index']
+                chapter_index: int = chapter["index"]
                 download_dict: dict = {manhwa_id: {chapter_index: {}}}
                 page_paths: list[str] = toonkor_api.download_chapter(manhwa_id, chapter)
 
@@ -51,24 +54,27 @@ class Downloader:
 
                     chapter_obj, _ = await sync_to_async(Chapter.objects.get_or_create)(
                         manhwa_id=manhwa_id,
-                        index=chapter['index'],
-                        toonkor_id=chapter['toonkor_id'],
-                        date_upload=chapter['date_upload']
+                        index=chapter["index"],
+                        toonkor_id=chapter["toonkor_id"],
+                        date_upload=chapter["date_upload"],
                     )
                     chapter_obj.download_status = StatusChoices.READY
                     await sync_to_async(chapter_obj.save)()
 
-                    chapter['download_status'] = StatusChoices.READY.value
+                    chapter["download_status"] = StatusChoices.READY.value
 
                     # Send progress update
                     await self._send_progress(group_name, [chapter], progress)
                     download_dict[manhwa_id][chapter_index] = {"page_paths": page_paths}
-                    if task == 'download_translate':
+                    if task == "download_translate":
                         start_comic_proc()
                         await self._send_translation_request(download_dict)
 
                 else:
-                    await self._send_error(group_name, f"Failed to download chapter {chapter['index'] + 1} of {manhwa_id}")
+                    await self._send_error(
+                        group_name,
+                        f"Failed to download chapter {chapter['index'] + 1} of {manhwa_id}",
+                    )
 
         except Exception as e:
             await self._send_error(group_name, str(e))
@@ -82,7 +88,7 @@ class Downloader:
                 "type": "send_progress",
                 "chapters": chapters,
                 "progress": progress,
-            }
+            },
         )
 
     async def _send_error(self, group_name, error_message):
@@ -92,7 +98,7 @@ class Downloader:
             {
                 "type": "send_progress",
                 "error": error_message,
-            }
+            },
         )
 
     async def _send_translation_request(self, download_dict):
@@ -102,7 +108,7 @@ class Downloader:
             {
                 "type": "send_translation_request",
                 "to_translate": download_dict,
-            }
+            },
         )
 
 

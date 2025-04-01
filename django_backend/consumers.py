@@ -1,11 +1,10 @@
-import asyncio
 import json
 
-from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+
 from django_backend.cleaner import cleaner
 from django_backend.downloader import downloader
-from django_backend.models import Chapter, StatusChoices, encode_name
+from django_backend.models import StatusChoices, encode_name
 
 
 class QtConsumer(AsyncWebsocketConsumer):
@@ -48,7 +47,7 @@ class QtConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         toonkor_id = data["toonkor_id"]
         chapter = int(data["chapter"])
-        group = f"download_translate_{encode_name(toonkor_id)}" 
+        group = f"download_translate_{encode_name(toonkor_id)}"
         await self.channel_layer.group_send(
             group,
             {
@@ -84,9 +83,7 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         and accepts the WebSocket connection.
         """
         self.manhwa_id = "/" + self.scope["url_route"]["kwargs"]["toonkor_id"]
-        self.group_name = (
-            f"download_translate_{encode_name(self.manhwa_id)}"
-        )
+        self.group_name = f"download_translate_{encode_name(self.manhwa_id)}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
@@ -102,7 +99,7 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         task = data["task"]
         chapters = data["chapters"]
         if task == "remove":
-            remove_choices  = data["remove_choices"]        
+            remove_choices = data["remove_choices"]
             await self.run_remove(chapters, remove_choices)
         else:
             await self.run_download_translate(task, chapters)
@@ -110,9 +107,9 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
     async def run_download_translate(self, task, chapters):
         progress = {"current": 0, "total": len(chapters)}
         for chapter in chapters:
-            chapter['download_status'] = StatusChoices.LOADING.value
-            if task == 'download_translate':
-                chapter['translation_status'] = StatusChoices.LOADING.value
+            chapter["download_status"] = StatusChoices.LOADING.value
+            if task == "download_translate":
+                chapter["translation_status"] = StatusChoices.LOADING.value
 
         await self.channel_layer.group_send(
             self.group_name,
@@ -120,17 +117,17 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
                 "type": "send_progress",
                 "chapters": chapters,
                 "progress": progress,
-            }
+            },
         )
         downloader.append(self.manhwa_id, self.group_name, task, chapters)
 
     async def run_remove(self, chapters, remove_choices):
         for chapter in chapters:
             if remove_choices["downloaded"]:
-                chapter['download_status'] = StatusChoices.REMOVING.value
+                chapter["download_status"] = StatusChoices.REMOVING.value
 
-            if remove_choices['translated']:
-                chapter['translation_status'] = StatusChoices.REMOVING.value
+            if remove_choices["translated"]:
+                chapter["translation_status"] = StatusChoices.REMOVING.value
 
         await self.channel_layer.group_send(
             self.group_name,
@@ -138,7 +135,7 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
                 "type": "send_progress",
                 "chapters": chapters,
                 "progress": {},
-            }
+            },
         )
         cleaner.append(self.manhwa_id, self.group_name, chapters, remove_choices)
 

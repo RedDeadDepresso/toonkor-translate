@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 import sys
 
 from django.contrib import admin
@@ -24,13 +25,20 @@ from django_backend.views import serve_react
 
 if "makemigrations" in sys.argv or "migrate" in sys.argv:
     urlpatterns = []
-    
+
 else:
     from django_backend.api import api
+
     urlpatterns = [
         path("admin/", admin.site.urls),
         path("api/", api.urls),
     ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
     # Catch-all React route should be last
-    urlpatterns += [re_path(r"^(?P<path>.*)$", serve_react, {"document_root": settings.REACT_APP_BUILD_PATH})]
+    urlpatterns += [
+        re_path(
+            r"^(?P<path>.*)$",
+            serve_react,
+            {"document_root": settings.REACT_APP_BUILD_PATH},
+        )
+    ]
