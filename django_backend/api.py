@@ -279,7 +279,8 @@ def chapter_from_index(manhwa_dict, index: int) -> ChapterSchema | None:
         if index < 0:
             return None
         return manhwa_dict["chapters"][index]
-    except:
+    except Exception as e:
+        print(e)
         return None
 
 

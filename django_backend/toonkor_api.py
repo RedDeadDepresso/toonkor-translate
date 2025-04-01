@@ -246,7 +246,8 @@ class ToonkorAPI:
             with open(img_path, "wb") as out_file:
                 out_file.write(response.content)
             return os.path.basename(manhwa.path) + f"/thumbnail{extension}"
-        except:
+        except Exception as e:
+            print(e)
             return None
 
     def download_page(

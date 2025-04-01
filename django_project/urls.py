@@ -17,11 +17,13 @@ Including another URLconf
 
 import sys
 
-from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
 from django.urls import path, re_path
+
 from django_backend.views import serve_react
+
 
 if "makemigrations" in sys.argv or "migrate" in sys.argv:
     urlpatterns = []

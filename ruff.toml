@@ -59,3 +59,16 @@ skip-magic-trailing-comma = false
 
 # Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
+
+[lint.isort]
+# Specify known sections for better import grouping
+known-first-party = ["django_backend"]
+known-third-party = ["django", "ninja"]
+known-local-folder = ["."]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+# Ensure a blank line after all imports
+lines-after-imports = 2
+
+# Merge `import a as b` statements when possible
+combine-as-imports = true

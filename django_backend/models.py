@@ -163,7 +163,8 @@ class Chapter(models.Model):
             if not os.listdir(folder_path):
                 os.rmdir(folder_path)
             return True
-        except:
+        except Exception as e:
+            print(e)
             return False
 
     def delete_download(self, save=True):
