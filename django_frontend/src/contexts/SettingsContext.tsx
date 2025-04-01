@@ -16,11 +16,7 @@ export const SettingsProvider = ({ children }: childrenProps) => {
         defaultValue: true,
     });
     const { colorScheme, setColorScheme } = useMantineColorScheme();
-    const [autoFetchToonkorUrl, setAutoFetchToonkorUrl] = useLocalStorage({
-        key: 'auto_fetch_toonkor_url',
-        defaultValue: false,
-    });
-    const [toonkorUrl, setToonkorUrl] = useLocalStorage({ key: 'toonkor_url', defaultValue: 'https://toonkor434.com' });
+    const [toonkorUrl, setToonkorUrl] = useLocalStorage({ key: 'toonkor_url', defaultValue: 'https://tkor08.com' });
     const [read, setRead] = useLocalStorage<readData>({key: 'read', defaultValue: {}})
     const [comicLoading, setComicLoading] = useState<boolean>(false);
 
@@ -43,18 +39,12 @@ export const SettingsProvider = ({ children }: childrenProps) => {
         if (!toonkorUrl) requestUrl("/api/toonkor_url")
     }, [toonkorUrl])
 
-    useEffect(() => {
-        if (autoFetchToonkorUrl) requestUrl("/api/fetch_toonkor_url")
-    }, [autoFetchToonkorUrl])
-
     return (
         <SettingsContext.Provider value={{
             displayEnglish,
             setDisplayEnglish,
             colorScheme,
             setColorScheme,
-            autoFetchToonkorUrl,
-            setAutoFetchToonkorUrl,
             toonkorUrl,
             setToonkorUrl,
             read, 

@@ -16,8 +16,6 @@ const SettingsDrawer = ({ settingsOpened, closeSettings }: SettingsDrawerProps) 
     setColorScheme,
     toonkorUrl,
     setToonkorUrl,
-    autoFetchToonkorUrl,
-    setAutoFetchToonkorUrl,
   } = useContext(SettingsContext);
 
   const [loading, setLoading] = useState<boolean>(false);
@@ -96,13 +94,6 @@ const SettingsDrawer = ({ settingsOpened, closeSettings }: SettingsDrawerProps) 
       </Stack>
       <h3 className={classes.subTitle}>Toonkor</h3>
       <Stack mt="sm" gap="sm">
-      <Switch
-        label="Auto-fetch Toonkor URL"
-        labelPosition="left"
-        checked={autoFetchToonkorUrl}
-        onChange={(event) => setAutoFetchToonkorUrl(event.currentTarget.checked)}
-        classNames={{track: classes.track}}
-      />
       <Group justify='space-between'>
         <TextInput
           placeholder="Set Toonkor URL"
