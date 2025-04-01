@@ -18,7 +18,7 @@ const Browse = () => {
     }
     setLoading(true);
     errorMessage && setErrorMessage('');
-    const url = `/api/browse/search?query=${searchQuery}`;
+    const url = `/api/browse?query=${searchQuery}`;
     try {
       const response = await fetch(url);
       if (!response.ok) {

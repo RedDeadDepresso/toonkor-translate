@@ -40,7 +40,7 @@ export const SettingsProvider = ({ children }: childrenProps) => {
     };
 
     useEffect(() => {
-        if (!toonkorUrl) requestUrl("/api/get_toonkor_url")
+        if (!toonkorUrl) requestUrl("/api/toonkor_url")
     }, [toonkorUrl])
 
     useEffect(() => {

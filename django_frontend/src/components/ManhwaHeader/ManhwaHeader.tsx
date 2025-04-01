@@ -78,7 +78,13 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const addToLibrary = async () => {
     try {
       setLibraryButtonState(LibraryButtonState.LOADING);
-      const response = await fetch(`/api/add_library?toonkor_id=${manhwaData.toonkor_id}`);
+      const response = await fetch('/api/manhwa', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ toonkor_id: manhwaData.toonkor_id }),
+      });
       const added = await response.json();
       if (added) {
         console.log("Added");
@@ -97,7 +103,13 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const removeFromLibrary = async () => {
     try {
       setLibraryButtonState(LibraryButtonState.LOADING);
-      const response = await fetch(`/api/remove_library?toonkor_id=${manhwaData.toonkor_id}`);
+      const response = await fetch('/api/manhwa', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ toonkor_id: manhwaData.toonkor_id }),
+      });
       const removed = await response.json();
       if (removed) {
         console.log("Removed");
@@ -112,7 +124,7 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
       setLibraryButtonState(LibraryButtonState.ADDED);
     }
   }
-  
+
   const renderLibraryButton = (state: LibraryButtonState) => {
     if (state === LibraryButtonState.ADDED) 
       return (
@@ -146,11 +158,11 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
 
         {/* Links Group */}
         {renderLibraryButton(libraryButtonState)}
-          <Group gap="sm" justify="center">
+        <Group gap="sm" justify="center">
           {renderBatotoButton(title)}
           {renderMangadexButton(manhwaData)}
           {renderLinkButton(`${toonkorUrl}${manhwaData.toonkor_id}`, '/images/toonkor-logo.png', 'Open Toonkor URL')}
-          </Group>
+        </Group>
 
         {/* Description Section */}
         <div>

@@ -131,8 +131,8 @@ def get_manhwa_details(toonkor_id: str) -> ManhwaSchema:
             ]
         ):
             update_manhwa_from_mangadex(manhwa_dict, manhwa_db)
-        manhwa.last_update = timezone.now()
-        manhwa.save()
+        manhwa_db.last_update = timezone.now()
+        manhwa_db.save()
 
         if isinstance(manhwa_dict.get("chapters"), dict):
             manhwa_dict["chapters"] = database_chapters_to_list(manhwa_dict["chapters"])
@@ -216,13 +216,7 @@ def library(request):
     return Manhwa.objects.filter(in_library=True)
 
 
-@api.get("/manhwa", response=ManhwaSchema)
-def manhwa(request, toonkor_id: str):
-    """Retrieve a specific Manhwa by toonkor_id from the library."""
-    return get_manhwa_details(toonkor_id)
-
-
-@api.get("/browse/search", response=list[ManhwaSchema])
+@api.get("/browse", response=list[ManhwaSchema])
 def browse(request, query: str):
     """Search for Manhwa using Mangadex API and update with Toonkor API."""
     try:
@@ -242,25 +236,31 @@ def browse(request, query: str):
         return []
 
 
-@api.get("/add_library", response=bool)
-def add_library(request, toonkor_id: str):
+@api.get("/manhwa", response=ManhwaSchema)
+def get_manhwa(request, toonkor_id: str):
+    """Retrieve a specific Manhwa by toonkor_id from the library and external apis."""
+    return get_manhwa_details(toonkor_id)
+
+
+@api.post("/manhwa", response=bool)
+def add_manhwa(request, toonkor_id: str):
     """Add a Manhwa to the library."""
     return add_manhwa_to_library(toonkor_id)
 
 
-@api.get("/remove_library", response=bool)
-def remove_library(request, toonkor_id: str):
+@api.delete("/manhwa", response=bool)
+def remove_manhwa(request, toonkor_id: str):
     """Remove a Manhwa from the library."""
     return remove_manhwa_from_library(toonkor_id)
 
 
-@api.get("/get_toonkor_url", response=ResponseToonkorUrlSchema)
+@api.get("/toonkor_url", response=ResponseToonkorUrlSchema)
 def get_toonkor_url(request):
     toonkor_settings, created = ToonkorSettings.objects.get_or_create(name="main")
     return {"url": toonkor_settings.url}
 
 
-@api.post("/set_toonkor_url", response=ResponseToonkorUrlSchema)
+@api.post("/toonkor_url", response=ResponseToonkorUrlSchema)
 def set_toonkor_url(request, data: SetToonkorUrlSchema):
     try:
         if toonkor_api == data.url:
