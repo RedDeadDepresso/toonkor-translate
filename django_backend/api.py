@@ -1,3 +1,5 @@
+import traceback
+
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.forms.models import model_to_dict
@@ -17,8 +19,8 @@ from django_backend.schemas import (
     ChapterPaginationSchema,
     ChaptersSchema,
     ManhwaSchema,
-    ResponseToonkorUrlSchema,
-    SetToonkorUrlSchema,
+    ResponseCurlCommandSchema,
+    SetCurlCommandSchema,
 )
 from django_backend.toonkor_api import toonkor_api
 from django_backend.utils import (
@@ -59,6 +61,7 @@ def browse(request, query: str):
         results = mangadex_api.search(query)
         return toonkor_api.multi_update_mangadex_search(results)
     except Exception as e:
+        traceback.print_exc()
         print(f"Error browsing Manhwa: {e}")
         return []
 
@@ -81,23 +84,26 @@ def remove_manhwa(request, toonkor_id: str):
     return remove_manhwa_from_library(toonkor_id)
 
 
-@api.get("/toonkor_url", response=ResponseToonkorUrlSchema)
-def get_toonkor_url(request):
+@api.get("/curl_command", response=ResponseCurlCommandSchema)
+def get_curl_command(request):
     toonkor_settings, _ = ToonkorSettings.objects.get_or_create(name="main")
-    return {"url": toonkor_settings.url}
+    return {
+        "curl_command": toonkor_settings.curl_command,
+        "toonkor_url": toonkor_api.base_url,
+    }
 
 
-@api.post("/toonkor_url", response=ResponseToonkorUrlSchema)
-def set_toonkor_url(request, data: SetToonkorUrlSchema):
+@api.post("/curl_command", response=ResponseCurlCommandSchema)
+def set_curl_command(request, data: SetCurlCommandSchema):
     try:
-        if toonkor_api == data.url:
-            return {"url": data.url}
-        elif toonkor_api.set_toonkor_url(data.url):
+        curl_command = data.curl_command
+        if toonkor_api.set_curl_command(curl_command):
             reset_start_time()
-            return {"url": data.url}
+            return {"curl_command": curl_command, "toonkor_url": toonkor_api.base_url}
         else:
-            return {"error": "Invalid Url"}
+            return {"error": "Invalid curl command"}
     except Exception as e:
+        traceback.print_exc()
         return {"error": str(e)}
 
 
@@ -128,8 +134,8 @@ def download_chapters(request, data: ChaptersSchema):
             },
         )
         return True
-    except Exception as e:
-        print(e)
+    except Exception:
+        traceback.print_exc()
         return False
 
 
@@ -160,8 +166,8 @@ def delete_chapters(request, data: ChaptersSchema):
         )
         cleaner.start()
         return True
-    except Exception as e:
-        print(e)
+    except Exception:
+        traceback.print_exc()
         return False
 
 

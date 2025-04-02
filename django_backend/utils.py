@@ -1,5 +1,6 @@
 import multiprocessing
 import re
+import traceback
 
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
@@ -147,6 +148,7 @@ def get_manhwa_details(toonkor_id: str) -> ManhwaSchema:
 
     except Exception as e:
         print(f"Error fetching details from Toonkor: {e}")
+        traceback.print_exc()
 
     if isinstance(manhwa_dict.get("chapters"), dict):
         manhwa_dict["chapters"] = database_chapters_to_list(manhwa_dict["chapters"])

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from django_backend.models import Chapter, Manhwa
+from django_backend.models import Chapter, Manhwa, ToonkorSettings
 
 
 # Register your models here.
@@ -8,3 +8,4 @@ from django_backend.models import Chapter, Manhwa
 
 admin.site.register(Manhwa)
 admin.site.register(Chapter)
+admin.site.register(ToonkorSettings)

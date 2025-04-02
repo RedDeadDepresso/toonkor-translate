@@ -176,5 +176,8 @@ class Chapter(models.Model):
 
 
 class ToonkorSettings(models.Model):
-    name = models.CharField(max_length=512)
-    url = models.URLField(default="https://tkor08.com")
+    name = models.CharField(max_length=8)
+    curl_command = models.TextField(
+        blank=True,
+        default="curl 'https://tkor08.com' --compressed -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0'",
+    )

@@ -20,6 +20,10 @@ export const SettingsProvider = ({ children }: childrenProps) => {
     key: 'toonkor_url',
     defaultValue: 'https://tkor08.com',
   });
+  const [curlCommand, setCurlCommand] = useLocalStorage({
+    key: 'curl_command',
+    defaultValue: ""
+  })
   const [read, setRead] = useLocalStorage<readData>({ key: 'read', defaultValue: {} });
   const [comicLoading, setComicLoading] = useState<boolean>(false);
 
@@ -31,7 +35,8 @@ export const SettingsProvider = ({ children }: childrenProps) => {
       }
       const json = await response.json();
       if (!json.error) {
-        setToonkorUrl(json.url);
+        setCurlCommand(json.curl_command);
+        setToonkorUrl(json.toonkor_url);
       }
     } catch (error: any) {
       console.error(error.message);
@@ -39,8 +44,8 @@ export const SettingsProvider = ({ children }: childrenProps) => {
   };
 
   useEffect(() => {
-    if (!toonkorUrl) requestUrl('/api/toonkor_url');
-  }, [toonkorUrl]);
+    if (!curlCommand) requestUrl('/api/curl_command');
+  }, [curlCommand]);
 
   return (
     <SettingsContext.Provider
@@ -49,6 +54,8 @@ export const SettingsProvider = ({ children }: childrenProps) => {
         setDisplayEnglish,
         colorScheme,
         setColorScheme,
+        curlCommand,
+        setCurlCommand,
         toonkorUrl,
         setToonkorUrl,
         read,

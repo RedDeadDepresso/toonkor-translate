@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
-import { ActionIcon, Button, Drawer, Group, Stack, Switch, Text, TextInput } from '@mantine/core';
+import { ActionIcon, Button, Drawer, Group, Stack, Switch, Text, Textarea } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
 import { SettingsContext } from '@/contexts/SettingsContext';
 import classes from '@/components/SettingsDrawer/SettingsDrawer.module.css';
@@ -15,26 +15,27 @@ const SettingsDrawer = ({ settingsOpened, closeSettings }: SettingsDrawerProps) 
     setDisplayEnglish,
     colorScheme,
     setColorScheme,
-    toonkorUrl,
+    curlCommand,
+    setCurlCommand,
     setToonkorUrl,
   } = useContext(SettingsContext);
 
   const [loading, setLoading] = useState<boolean>(false);
-  const [inputUrl, setInputUrl] = useState<string>(toonkorUrl);
+  const [inputUrl, setInputUrl] = useState<string>(curlCommand);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [success, setSuccess] = useState<boolean>(false);
 
   useEffect(() => {
-    setInputUrl(toonkorUrl);
-  }, [toonkorUrl]);
+    setInputUrl(curlCommand);
+  }, [curlCommand]);
 
-  const submitToonkorUrl = async () => {
+  const submitCurlCommand = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/toonkor_url', {
+      const response = await fetch('/api/curl_command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: inputUrl }),
+        body: JSON.stringify({ curl_command: inputUrl }),
       });
 
       if (!response.ok) {
@@ -45,8 +46,8 @@ const SettingsDrawer = ({ settingsOpened, closeSettings }: SettingsDrawerProps) 
       if (json.error) {
         throw new Error(json.error);
       }
-
-      setToonkorUrl(inputUrl);
+      setCurlCommand(inputUrl);
+      setToonkorUrl(json.toonkor_url);
       setSuccess(true);
     } catch (error: any) {
       setErrorMessage(error.message);
@@ -102,17 +103,18 @@ const SettingsDrawer = ({ settingsOpened, closeSettings }: SettingsDrawerProps) 
         <h3 className={classes.subTitle}>Toonkor</h3>
         <Stack mt="sm" gap="sm">
           <Group justify="space-between">
-            <TextInput
-              placeholder="Set Toonkor URL"
+            <Textarea
+              placeholder="Set curl command"
               value={inputUrl}
               onChange={(event) => handleInputUrlChange(event.currentTarget.value)}
               disabled={loading}
               className={classes.input}
+              autosize
             />
-            <Button onClick={submitToonkorUrl} loading={loading} loaderProps={{ type: 'dots' }}>
+            <Button onClick={submitCurlCommand} loading={loading} loaderProps={{ type: 'dots' }}>
               {loading ? 'Loading' : 'Save'}
             </Button>
-            {success && <Text c="green">URL saved successfully</Text>}
+            {success && <Text c="green">curl command saved successfully</Text>}
             {errorMessage && <Text c="red">{errorMessage}</Text>}
           </Group>
         </Stack>

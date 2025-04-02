@@ -4,8 +4,10 @@ import os
 import re
 from datetime import datetime
 from typing import List
+from urllib.parse import urlparse
 
 import requests
+import uncurl
 from bs4 import BeautifulSoup
 from django.utils.timesince import timesince
 
@@ -15,22 +17,34 @@ from django_backend.schemas import ManhwaSchema
 
 class ToonkorAPI:
     def __init__(self):
-        self.client = requests.Session()
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-        }
-        toonkor_settings, created = ToonkorSettings.objects.get_or_create(name="main")
-        self.base_url = toonkor_settings.url
+        toonkor_settings, _ = ToonkorSettings.objects.get_or_create(name="main")
+        context = uncurl.parse_context(toonkor_settings.curl_command)
 
-    def set_toonkor_url(self, url: str):
-        response = self.client.get(url, headers=self.headers)
+        self.client = requests.Session()
+        self.base_url = self.get_base_url(context.url)
+        context.headers.pop("Accept-Encoding", None)
+        self.headers = context.headers
+        self.cookies = context.cookies
+
+    def get_base_url(self, url):
+        parsed_url = urlparse(url)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        return base_url
+
+    def set_curl_command(self, curl_command: str):
+        context = uncurl.parse_context(curl_command)
+        base_url = self.get_base_url(context.url)
+        context.headers.pop("Accept-Encoding", None)
+        response = self.client.get(
+            base_url, headers=context.headers, cookies=context.cookies
+        )
         if response.status_code == 200:
-            toonkor_api.base_url = url
-            toonkor_settings, created = ToonkorSettings.objects.get_or_create(
-                name="main"
+            ToonkorSettings.objects.update_or_create(
+                name="main", defaults={"curl_command": curl_command}
             )
-            toonkor_settings.url = url
-            toonkor_settings.save()
+            self.base_url = base_url
+            self.headers = context.headers
+            self.cookies = context.cookies
             return True
         return False
 
@@ -96,7 +110,9 @@ class ToonkorAPI:
         }
         search_url = self.search_manga_request(1, query, filters)
 
-        response = self.client.get(search_url, headers=self.headers)
+        response = self.client.get(
+            search_url, headers=self.headers, cookies=self.cookies
+        )
         soup = BeautifulSoup(response.text, "lxml")
 
         # Parse the search results
@@ -113,7 +129,9 @@ class ToonkorAPI:
             "sort": "?fil=%EC%B5%9C%EC%8B%A0",  # Optional: specify sorting (e.g., "Latest")
         }
         search_url = self.search_manga_request(1, mangadex_search["title"], filters)
-        response = self.client.get(search_url, headers=self.headers)
+        response = self.client.get(
+            search_url, headers=self.headers, cookies=self.cookies
+        )
         if response.status_code != 200:
             return None
 
@@ -178,7 +196,9 @@ class ToonkorAPI:
 
     def get_manga_details(self, toonkor_id: str, chapters_db=dict()) -> ManhwaSchema:
         manga_url = f"{self.base_url}{toonkor_id}"
-        response = self.client.get(manga_url, headers=self.headers)
+        response = self.client.get(
+            manga_url, headers=self.headers, cookies=self.cookies
+        )
         soup = BeautifulSoup(response.text, "lxml")
         return self.manga_details_parse(soup, toonkor_id, chapters_db)
 
@@ -214,7 +234,9 @@ class ToonkorAPI:
 
     def get_page_list(self, chapter_id: str):
         chapter_url = f"{self.base_url}{chapter_id}"
-        response = self.client.get(chapter_url, headers=self.headers)
+        response = self.client.get(
+            chapter_url, headers=self.headers, cookies=self.cookies
+        )
         soup = BeautifulSoup(response.text, "lxml")
         return self.page_list_parse(soup)
 
@@ -253,15 +275,20 @@ class ToonkorAPI:
     def download_page(
         self, manhwa_path: str, chapter_index: int, page_index: str, page_url: str
     ) -> str:
-        with requests.get(page_url, stream=True) as response:
-            _, extension = os.path.splitext(page_url)
-            img_path = os.path.abspath(
-                f"{manhwa_path}/{chapter_index}/{page_index}{extension}"
-            )
-            if not os.path.exists(img_path):
-                with open(img_path, "wb") as out_file:
-                    out_file.write(response.content)
-            return img_path
+        try:
+            with self.client.get(
+                page_url, headers=self.headers, cookies=self.cookies, stream=True
+            ) as response:
+                _, extension = os.path.splitext(page_url)
+                img_path = os.path.abspath(
+                    f"{manhwa_path}/{chapter_index}/{page_index}{extension}"
+                )
+                if not os.path.exists(img_path):
+                    with open(img_path, "wb") as out_file:
+                        out_file.write(response.content)
+                return img_path
+        except Exception as e:
+            print(e)
 
     def download_chapter(self, chapter: Chapter) -> list[str]:
         try:
