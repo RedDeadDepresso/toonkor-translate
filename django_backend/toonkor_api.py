@@ -9,7 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 from django.utils.timesince import timesince
 
-from django_backend.models import ToonkorSettings, encode_name
+from django_backend.models import Chapter, ToonkorSettings
 from django_backend.schemas import ManhwaSchema
 
 
@@ -251,7 +251,7 @@ class ToonkorAPI:
             return None
 
     def download_page(
-        self, manhwa_path: str, chapter_index: str, page_index: str, page_url: str
+        self, manhwa_path: str, chapter_index: int, page_index: str, page_url: str
     ) -> str:
         with requests.get(page_url, stream=True) as response:
             _, extension = os.path.splitext(page_url)
@@ -263,14 +263,14 @@ class ToonkorAPI:
                     out_file.write(response.content)
             return img_path
 
-    def download_chapter(self, manhwa_id: str, chapter_dict: dict) -> list[str]:
+    def download_chapter(self, chapter: Chapter) -> list[str]:
         try:
             # Create necessary directories
-            manhwa_path = f"django_backend/media/{encode_name(manhwa_id)}"
-            os.makedirs(f"{manhwa_path}/{chapter_dict['index']}", exist_ok=True)
+            manhwa_path = chapter.manhwa.path
+            os.makedirs(f"{manhwa_path}/{chapter.index}", exist_ok=True)
 
             # Get chapter details
-            page_list = self.get_page_list(chapter_dict["toonkor_id"])
+            page_list = self.get_page_list(chapter.toonkor_id)
 
             # Download all pages concurrently
             with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -278,7 +278,7 @@ class ToonkorAPI:
                     executor.submit(
                         self.download_page,
                         manhwa_path,
-                        chapter_dict["index"],
+                        chapter.index,
                         page["index"],
                         page["url"],
                     )
@@ -293,7 +293,7 @@ class ToonkorAPI:
 
         except Exception as e:
             print(
-                f"Error downloading chapter {chapter_dict['index'] + 1} of {manhwa_id}: {str(e)}"
+                f"Error downloading chapter {chapter.index + 1} of {chapter.manhwa}: {str(e)}"
             )
             return None
 

@@ -1,9 +1,10 @@
-import asyncio
 import threading
 from collections import deque
 
-from asgiref.sync import sync_to_async
+from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.db.models import Q
+from django.forms import model_to_dict
 
 from django_backend.models import Chapter, StatusChoices
 
@@ -14,55 +15,68 @@ class Cleaner:
         self._thread = None
         self._channel_layer = get_channel_layer()
 
-    def append(self, manhwa_id, group_name, chapters, remove_choices):
+    def start(self):
         """Add a new download task to the queue and start the worker thread if necessary."""
-        self._queue.append([manhwa_id, group_name, chapters, remove_choices])
-
         if self._thread is None or not self._thread.is_alive():
-            self._thread = threading.Thread(target=self._run_loop)
+            self._thread = threading.Thread(target=self._remove_chapters)
             self._thread.daemon = True
             self._thread.start()
 
-    def _run_loop(self):
-        """Worker loop that processes tasks from the queue."""
-        while self._queue:
-            manhwa_id, group_name, chapters, remove_choices = self._queue.popleft()
+    def _remove_chapters(self):
+        chapter_db = None
+        chapter_dict = None
+        group_name = None
+
+        while True:
             try:
-                for chapter in chapters:
-                    asyncio.run(
-                        self._remove(manhwa_id, group_name, chapter, remove_choices)
-                    )
-            except Exception:
-                import traceback
+                chapter_db = Chapter.objects.filter(
+                    Q(download_status=StatusChoices.REMOVING)
+                    | Q(translation_status=StatusChoices.REMOVING)
+                ).first()
 
-                traceback.print_exc()
+                if chapter_db is None:
+                    return
 
-    async def _remove(self, manhwa_id, group_name, chapter, remove_choices):
-        chapter_obj = await sync_to_async(Chapter.objects.get)(
-            manhwa_id=manhwa_id,
-            index=chapter["index"],
-            toonkor_id=chapter["toonkor_id"],
-            date_upload=chapter["date_upload"],
-        )
-        if remove_choices["downloaded"]:
-            chapter_obj.delete_download(save=False)
-            chapter["download_status"] = StatusChoices.NOT_READY.value
+                chapter_dict = model_to_dict(chapter_db)
+                group_name = f"download_translate_{chapter_db.manhwa.encoded_name}"
 
-        if remove_choices["translated"]:
-            chapter_obj.delete_translation(save=False)
-            chapter["translation_status"] = StatusChoices.NOT_READY.value
+                if chapter_db.download_status == StatusChoices.REMOVING:
+                    chapter_db.delete_download()
+                    chapter_dict["download_status"] = StatusChoices.NOT_READY.value
+                    self._send_progress(group_name, [chapter_dict])
 
-        await sync_to_async(chapter_obj.save)()
-        await self._send_progress(group_name, [chapter], {})
+                if chapter_db.translation_status == StatusChoices.REMOVING:
+                    chapter_db.delete_translation()
+                    chapter_dict["translation_status"] = StatusChoices.NOT_READY.value
+                    self._send_progress(group_name, [chapter_dict])
 
-    async def _send_progress(self, group_name, chapters, progress):
+            except Exception as e:
+                print(e)
+
+                if chapter_db is not None:
+                    fields = ["download_status", "translation_status"]
+                    for field in fields:
+                        if getattr(chapter_db, field, None) == StatusChoices.REMOVING:
+                            setattr(chapter_db, field, StatusChoices.READY)
+                            chapter_dict[field] = StatusChoices.READY.value
+                    chapter_db.save()
+
+                if chapter_dict and group_name:
+                    self._send_progress(group_name, [chapter_dict])
+                    self._send_error(group_name, str(e))
+
+            finally:
+                chapter_db = None
+                chapter_dict = None
+                group_name = None
+
+    def _send_progress(self, group_name, chapters):
         """Send progress updates to the WebSocket group."""
-        await self._channel_layer.group_send(
+        async_to_sync(self._channel_layer.group_send)(
             group_name,
             {
                 "type": "send_progress",
                 "chapters": chapters,
-                "progress": progress,
             },
         )
 

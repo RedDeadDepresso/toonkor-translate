@@ -1,13 +1,13 @@
-import asyncio
 import threading
 from collections import deque
 
-from asgiref.sync import sync_to_async
+from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.forms.models import model_to_dict
 
-from django_backend.api import start_comic_proc
 from django_backend.models import Chapter, StatusChoices
 from django_backend.toonkor_api import toonkor_api
+from django_backend.utils import start_comic_proc
 
 
 class Downloader:
@@ -17,83 +17,81 @@ class Downloader:
         self._channel_layer = get_channel_layer()
         self._comic_proc = None
 
-    def append(self, manhwa_id, group_name, task, chapters):
+    def start(self):
         """Add a new download task to the queue and start the worker thread if necessary."""
-        self._queue.append([manhwa_id, group_name, task, chapters])
-
         if self._thread is None or not self._thread.is_alive():
-            self._thread = threading.Thread(target=self._run_loop)
+            self._thread = threading.Thread(target=self._download_chapters)
             self._thread.daemon = True
             self._thread.start()
 
-    def _run_loop(self):
-        """Worker loop that processes tasks from the queue."""
-        while self._queue:
-            try:
-                # Get the next task from the queue
-                manhwa_id, group_name, task, chapters = self._queue.popleft()
-                asyncio.run(
-                    self._download_chapters(manhwa_id, group_name, task, chapters)
-                )
-
-            except Exception as e:
-                print(f"Error processing task: {e}")
-
-    async def _download_chapters(self, manhwa_id, group_name, task, chapters):
+    def _download_chapters(self):
         """Download chapters and update progress in real-time."""
-        progress = {"current": 0, "total": len(chapters)}
+        chapter_db = None
+        chapter_dict = None
+        group_name = None
 
-        try:
-            for chapter in chapters:
-                chapter_index: int = chapter["index"]
-                download_dict: dict = {manhwa_id: {chapter_index: {}}}
-                page_paths: list[str] = toonkor_api.download_chapter(manhwa_id, chapter)
+        while True:
+            try:
+                chapter_db = Chapter.objects.filter(
+                    download_status=StatusChoices.LOADING
+                ).first()
+
+                if chapter_db is None:
+                    return
+
+                chapter_dict = model_to_dict(chapter_db)
+                group_name = f"download_translate_{chapter_db.manhwa.encoded_name}"
+                page_paths: list[str] = toonkor_api.download_chapter(chapter_db)
 
                 if page_paths:
-                    progress["current"] += 1
-
-                    chapter_obj, _ = await sync_to_async(Chapter.objects.get_or_create)(
-                        manhwa_id=manhwa_id,
-                        index=chapter["index"],
-                        toonkor_id=chapter["toonkor_id"],
-                        date_upload=chapter["date_upload"],
-                    )
-                    chapter_obj.download_status = StatusChoices.READY
-                    await sync_to_async(chapter_obj.save)()
-
-                    chapter["download_status"] = StatusChoices.READY.value
+                    chapter_db.download_status = StatusChoices.READY
+                    chapter_dict["download_status"] = StatusChoices.READY
+                    chapter_db.save()
 
                     # Send progress update
-                    await self._send_progress(group_name, [chapter], progress)
-                    download_dict[manhwa_id][chapter_index] = {"page_paths": page_paths}
-                    if task == "download_translate":
-                        start_comic_proc()
-                        await self._send_translation_request(download_dict)
+                    self._send_progress(group_name, [chapter_dict])
 
+                    if chapter_db.translation_status == StatusChoices.LOADING:
+                        start_comic_proc()
+                        self._send_translation_request()
                 else:
-                    await self._send_error(
-                        group_name,
-                        f"Failed to download chapter {chapter['index'] + 1} of {manhwa_id}",
+                    raise Exception(
+                        f"Failed to download chapter {chapter_db.index + 1} of {chapter_db.manhwa}"
                     )
 
-        except Exception as e:
-            await self._send_error(group_name, str(e))
-            raise e
+            except Exception as e:
+                print(e)
 
-    async def _send_progress(self, group_name, chapters, progress):
+                if chapter_db is not None:
+                    fields = ["download_status", "translation_status"]
+                    for field in fields:
+                        if getattr(chapter_db, field, None) == StatusChoices.LOADING:
+                            setattr(chapter_db, field, StatusChoices.NOT_READY)
+                            chapter_dict[field] = StatusChoices.NOT_READY.value
+                    chapter_db.save()
+
+                if chapter_dict and group_name:
+                    self._send_progress(group_name, [chapter_dict])
+                    self._send_error(group_name, str(e))
+
+            finally:
+                chapter_db = None
+                chapter_dict = None
+                group_name = None
+
+    def _send_progress(self, group_name, chapters):
         """Send progress updates to the WebSocket group."""
-        await self._channel_layer.group_send(
+        async_to_sync(self._channel_layer.group_send)(
             group_name,
             {
                 "type": "send_progress",
                 "chapters": chapters,
-                "progress": progress,
             },
         )
 
-    async def _send_error(self, group_name, error_message):
+    def _send_error(self, group_name, error_message):
         """Send an error message to the WebSocket group."""
-        await self._channel_layer.group_send(
+        async_to_sync(self._channel_layer.group_send)(
             group_name,
             {
                 "type": "send_progress",
@@ -101,13 +99,12 @@ class Downloader:
             },
         )
 
-    async def _send_translation_request(self, download_dict):
+    def _send_translation_request(self):
         """Send translation request to the 'qt' group."""
-        await self._channel_layer.group_send(
+        async_to_sync(self._channel_layer.group_send)(
             "qt",
             {
                 "type": "send_translation_request",
-                "to_translate": download_dict,
             },
         )
 

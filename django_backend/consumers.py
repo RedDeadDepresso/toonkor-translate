@@ -2,9 +2,8 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from django_backend.cleaner import cleaner
-from django_backend.downloader import downloader
-from django_backend.models import StatusChoices, encode_name
+from django_backend.models import encode_name
+from django_backend.schemas import ProgressSchema
 
 
 class QtConsumer(AsyncWebsocketConsumer):
@@ -33,8 +32,7 @@ class QtConsumer(AsyncWebsocketConsumer):
         Args:
             event (dict): The event data containing the text_data to be sent.
         """
-        to_translate = event["to_translate"]
-        await self.send(json.dumps(to_translate))
+        await self.send("Translate")
 
     async def receive(self, text_data):
         """
@@ -52,8 +50,7 @@ class QtConsumer(AsyncWebsocketConsumer):
             group,
             {
                 "type": "send_progress",
-                "chapters": [{"index": chapter, "status": "Translated"}],
-                "progress": {},
+                "chapters": [{"index": chapter}],
             },
         )
 
@@ -87,59 +84,7 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
-    async def receive(self, text_data):
-        """
-        Receives data from the WebSocket client, starts the download process for the specified chapters,
-        and optionally triggers the translation process.
-
-        Args:
-            text_data (str): JSON string containing the task, manhwa toonkor_id, and chapters to download.
-        """
-        data = json.loads(text_data)
-        task = data["task"]
-        chapters = data["chapters"]
-        if task == "remove":
-            remove_choices = data["remove_choices"]
-            await self.run_remove(chapters, remove_choices)
-        else:
-            await self.run_download_translate(task, chapters)
-
-    async def run_download_translate(self, task, chapters):
-        progress = {"current": 0, "total": len(chapters)}
-        for chapter in chapters:
-            chapter["download_status"] = StatusChoices.LOADING.value
-            if task == "download_translate":
-                chapter["translation_status"] = StatusChoices.LOADING.value
-
-        await self.channel_layer.group_send(
-            self.group_name,
-            {
-                "type": "send_progress",
-                "chapters": chapters,
-                "progress": progress,
-            },
-        )
-        downloader.append(self.manhwa_id, self.group_name, task, chapters)
-
-    async def run_remove(self, chapters, remove_choices):
-        for chapter in chapters:
-            if remove_choices["downloaded"]:
-                chapter["download_status"] = StatusChoices.REMOVING.value
-
-            if remove_choices["translated"]:
-                chapter["translation_status"] = StatusChoices.REMOVING.value
-
-        await self.channel_layer.group_send(
-            self.group_name,
-            {
-                "type": "send_progress",
-                "chapters": chapters,
-                "progress": {},
-            },
-        )
-        cleaner.append(self.manhwa_id, self.group_name, chapters, remove_choices)
-
-    async def send_progress(self, event):
+    async def send_progress(self, event: ProgressSchema):
         """
         Sends progress updates to the WebSocket client.
 

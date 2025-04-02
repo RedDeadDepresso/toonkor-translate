@@ -3,19 +3,6 @@ import os
 from functools import cached_property
 
 from django.db import models
-from django.utils import timezone
-
-
-_start_time = timezone.now()
-
-
-def get_start_time():
-    return _start_time
-
-
-def reset_start_time():
-    global _start_time
-    _start_time = timezone.now()
 
 
 def encode_name(name: str):
@@ -37,13 +24,19 @@ class Manhwa(models.Model):
 
     thumbnail = models.ImageField(blank=True)
     mangadex_id = models.CharField(max_length=512, blank=True)
-    toonkor_id = models.SlugField(default="")
+    toonkor_id = models.SlugField(unique=True)
 
     in_library = models.BooleanField(default=True)
     last_update = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return self.title
+        if not self.en_title:
+            return self.title
+        return f"{self.title} | {self.en_title}"
+
+    @cached_property
+    def encoded_name(self) -> str:
+        return encode_name(self.toonkor_id)
 
     @cached_property
     def media_path(self) -> str:
@@ -63,7 +56,7 @@ class StatusChoices(models.TextChoices):
 
 class Chapter(models.Model):
     index = models.IntegerField()
-    toonkor_id = models.SlugField(default="")
+    toonkor_id = models.SlugField(unique=True)
     date_upload = models.CharField(max_length=512, blank=True)
     manhwa = models.ForeignKey(Manhwa, on_delete=models.CASCADE)
 
@@ -153,15 +146,13 @@ class Chapter(models.Model):
 
     def delete_pages(self, folder_path) -> bool:
         try:
-            if not os.path.isdir(folder_path):
-                return False
+            if os.path.isdir(folder_path):
+                for file in os.listdir(folder_path):
+                    if self.is_page(file):
+                        os.remove(os.path.join(folder_path, file))
 
-            for file in os.listdir(folder_path):
-                if self.is_page(file):
-                    os.remove(os.path.join(folder_path, file))
-
-            if not os.listdir(folder_path):
-                os.rmdir(folder_path)
+                if not os.listdir(folder_path):
+                    os.rmdir(folder_path)
             return True
         except Exception as e:
             print(e)

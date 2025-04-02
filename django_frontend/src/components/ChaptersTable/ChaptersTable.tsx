@@ -15,6 +15,7 @@ import {
 import { IconDownload, IconFilter, IconLanguage, IconTrash, IconWorld } from '@tabler/icons-react';
 import classes from './ChaptersTable.module.css';
 import ChapterData from '@/types/chapterData';
+import { StatusChoices } from '@/types/chapterData';
 import { SettingsContext } from '@/contexts/SettingsContext';
 import useOpenURL from '@/hooks/useOpenURL';
 
@@ -73,15 +74,15 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
     if (filters.downloaded && filters.translated) {
       setChapters(
         chapterDataList.filter(
-          (chapter) => chapter.download_status === 'READY' && chapter.translation_status === 'READY'
+          (chapter) => chapter.download_status === StatusChoices.READY && chapter.translation_status === StatusChoices.READY
         )
       );
     } else if (!filters.downloaded && !filters.translated) {
       setChapters(chapterDataList);
     } else if (filters.downloaded) {
-      setChapters(chapterDataList.filter((chapter) => chapter.download_status === 'READY'));
+      setChapters(chapterDataList.filter((chapter) => chapter.download_status === StatusChoices.READY));
     } else if (filters.translated) {
-      setChapters(chapterDataList.filter((chapter) => chapter.translation_status === 'READY'));
+      setChapters(chapterDataList.filter((chapter) => chapter.translation_status === StatusChoices.READY ));
     }
   };
 
@@ -97,32 +98,36 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
     setSelection(selection.length === chapters.length ? [] : [...chapters]);
   };
 
-  const sendSelection = (task: 'download' | 'download_translate' | 'remove') => {
-    if (selection.length === 0) return;
+  const submitDownloadChapters = async (translation: boolean = false) => {
+    await fetch("/api/chapters", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ chapters: selection, translation: translation }),      
+    });
+  }
 
-    const filteredSelection = task === 'remove' ? removeSelection() : selection;
-    if (socket) {
-      socket.send(
-        JSON.stringify({
-          task,
-          toonkor_id: `/${toonkorId}`,
-          chapters: filteredSelection,
-          remove_choices: removeChoices,
-        })
-      );
-    }
-  };
+  const submitRemoveChapters = async () => {
+    await fetch("/api/chapters", {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ chapters: removeSelection(), translation: removeChoices.translated }),      
+    });
+  }
 
   const removeSelection = () => {
     if (removeChoices.downloaded && removeChoices.translated) {
       return selection.filter(
         (selected) =>
-          selected.download_status !== 'LOADING' || selected.translation_status !== 'LOADING'
+          selected.download_status === StatusChoices.READY || selected.translation_status === StatusChoices.READY
       );
     } if (removeChoices.downloaded) {
-      return selection.filter((selected) => selected.download_status !== 'LOADING');
-    } if (removeChoices.downloaded) {
-      return selection.filter((selected) => selected.translation_status !== 'LOADING');
+      return selection.filter((selected) => selected.download_status === StatusChoices.READY);
+    } if (removeChoices.translated) {
+      return selection.filter((selected) => selected.translation_status === StatusChoices.READY);
     }
   };
 
@@ -166,12 +171,12 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
               <ActionIcon
                 variant="light"
                 disabled={
-                  chapter.download_status === 'NOT_READY' || chapter.download_status === 'REMOVING'
+                  chapter.download_status === StatusChoices.NOT_READY || chapter.download_status === StatusChoices.REMOVING
                 }
                 loading={
-                  chapter.download_status === 'LOADING' || chapter.download_status === 'REMOVING'
+                  chapter.download_status === StatusChoices.LOADING || chapter.download_status === StatusChoices.REMOVING
                 }
-                color={chapter.download_status === 'REMOVING' ? 'red' : undefined}
+                color={chapter.download_status === StatusChoices.REMOVING ? 'red' : undefined}
                 onClick={(event) => {
                   event.stopPropagation();
                   openLocalURL(chapter.toonkor_id, 'downloaded', false);
@@ -184,12 +189,12 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
               <ActionIcon
                 variant="outline"
                 disabled={
-                  chapter.translation_status === 'NOT_READY' ||
-                  chapter.translation_status === 'REMOVING'
+                  chapter.translation_status === StatusChoices.NOT_READY ||
+                  chapter.translation_status === StatusChoices.REMOVING
                 }
                 loading={
-                  chapter.translation_status === 'LOADING' ||
-                  chapter.translation_status === 'REMOVING'
+                  chapter.translation_status === StatusChoices.LOADING ||
+                  chapter.translation_status === StatusChoices.REMOVING
                 }
                 color={chapter.translation_status === 'REMOVING' ? 'red' : undefined}
                 onClick={(event) => {
@@ -210,12 +215,12 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
     <div>
       <Group justify="end">
         <Tooltip label="Download">
-          <ActionIcon variant="default" onClick={() => sendSelection('download')}>
+          <ActionIcon variant="default" onClick={() => submitDownloadChapters()}>
             <IconDownload />
           </ActionIcon>
         </Tooltip>
         <Tooltip label="Download & Translate">
-          <ActionIcon variant="default" onClick={() => sendSelection('download_translate')}>
+          <ActionIcon variant="default" onClick={() => submitDownloadChapters(true)}>
             <IconLanguage />
           </ActionIcon>
         </Tooltip>
@@ -248,7 +253,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
                 variant="filled"
                 color="red"
                 disabled={!removeChoices.downloaded && !removeChoices.translated}
-                onClick={() => sendSelection('remove')}
+                onClick={submitRemoveChapters}
               >
                 Remove
               </Button>

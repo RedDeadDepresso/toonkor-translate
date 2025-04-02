@@ -48,7 +48,18 @@ class ResponseToonkorUrlSchema(Schema):
     error: str = ""
 
 
+class ChaptersSchema(Schema):
+    chapters: list[ChapterSchema]
+    translation: bool = False
+
+
 class DownloadTranslateSchema(Schema):
-    task: Literal["download", "download_translate"]
+    task: Literal["download", "download_translate", "remove"]
     toonkor_id: str
     chapters: list[int]
+    remove_choices: Literal["downloaded", "translated"] = ""
+
+
+class ProgressSchema(Schema):
+    chapters: list[ChapterSchema] = []
+    error: str = ""
