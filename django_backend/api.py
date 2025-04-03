@@ -3,6 +3,7 @@ import traceback
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.forms.models import model_to_dict
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from ninja import NinjaAPI
 
@@ -105,6 +106,25 @@ def set_curl_command(request, data: SetCurlCommandSchema):
     except Exception as e:
         traceback.print_exc()
         return {"error": str(e)}
+
+
+@api.get("/thumbnail/{path:path}")  # <-- `:path` allows capturing full paths
+def get_thumbnail(request, path):  # Ensure underscores are not converted
+    try:
+        response = toonkor_api.get_thumbnail(path)
+
+        if response.status_code == 200:
+            content_type = response.headers.get(
+                "Content-Type", "image/jpeg"
+            )  # Default to JPEG
+            return HttpResponse(content=response.content, content_type=content_type)
+
+        return HttpResponse("Error fetching image", status=response.status_code)
+
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
+        return HttpResponse("Internal server error", status=500)
 
 
 @api.post("/chapters", response=bool)

@@ -133,8 +133,10 @@ def get_manhwa_details(toonkor_id: str) -> ManhwaSchema:
             ]
         ):
             update_manhwa_from_mangadex(manhwa_dict, manhwa_db)
-        manhwa_db.last_update = timezone.now()
-        manhwa_db.save()
+
+        if manhwa_db:
+            manhwa_db.last_update = timezone.now()
+            manhwa_db.save()
 
         if isinstance(manhwa_dict.get("chapters"), dict):
             manhwa_dict["chapters"] = database_chapters_to_list(manhwa_dict["chapters"])
@@ -145,6 +147,7 @@ def get_manhwa_details(toonkor_id: str) -> ManhwaSchema:
                     for chapter_data in new_chapters
                 ]
                 Chapter.objects.bulk_create(new_chapters)
+                manhwa_dict["thumbnail"] = manhwa_db.thumbnail.url
 
     except Exception as e:
         print(f"Error fetching details from Toonkor: {e}")

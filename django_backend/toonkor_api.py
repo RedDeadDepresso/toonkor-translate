@@ -61,11 +61,12 @@ class ToonkorAPI:
         title_element = element.select_one("div.section-item-title a h3")
         toonkor_id = element.select_one("div.section-item-title a")["href"]
         thumbnail_url = element.select_one("img")["src"]
+        thumbnail_url = urlparse(thumbnail_url).path
 
         return {
             "title": title_element.text,
             "toonkor_id": toonkor_id,
-            "thumbnail": thumbnail_url,
+            "thumbnail": f"/api/thumbnail{thumbnail_url}",
         }
 
     latest_request_modifier = "?fil=%EC%B5%9C%EC%8B%A0"
@@ -189,7 +190,7 @@ class ToonkorAPI:
             "title": title,
             "author": author,
             "description": description,
-            "thumbnail": f"{self.base_url}/{thumbnail_url}",
+            "thumbnail": f"/api/thumbnail{thumbnail_url}",
             "chapters": chapters,
             "toonkor_id": toonkor_id,
         }, new_chapters
@@ -257,6 +258,12 @@ class ToonkorAPI:
             "Latest": self.latest_request_modifier,
             "Completed": "/%EC%99%84%EA%B2%B0",
         }
+
+    def get_thumbnail(self, path):
+        response = self.client.get(
+            f"{self.base_url}/{path}", headers=self.headers, cookies=self.cookies
+        )
+        return response
 
     # Download
     def download_thumbnail(self, manhwa, img_url: str) -> str | None:

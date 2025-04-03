@@ -109,7 +109,7 @@ const SettingsDrawer = ({ settingsOpened, closeSettings }: SettingsDrawerProps) 
               onChange={(event) => handleInputUrlChange(event.currentTarget.value)}
               disabled={loading}
               className={classes.input}
-              autosize
+              resize="vertical"
             />
             <Button onClick={submitCurlCommand} loading={loading} loaderProps={{ type: 'dots' }}>
               {loading ? 'Loading' : 'Save'}

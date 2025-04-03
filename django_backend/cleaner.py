@@ -1,5 +1,4 @@
 import threading
-from collections import deque
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -11,12 +10,11 @@ from django_backend.models import Chapter, StatusChoices
 
 class Cleaner:
     def __init__(self):
-        self._queue = deque()
         self._thread = None
         self._channel_layer = get_channel_layer()
 
     def start(self):
-        """Add a new download task to the queue and start the worker thread if necessary."""
+        """start the worker thread if necessary."""
         if self._thread is None or not self._thread.is_alive():
             self._thread = threading.Thread(target=self._remove_chapters)
             self._thread.daemon = True
