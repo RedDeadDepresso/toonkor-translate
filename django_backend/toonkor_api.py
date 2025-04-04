@@ -31,22 +31,22 @@ class ToonkorAPI:
         base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
         return base_url
 
-    def set_curl_command(self, curl_command: str):
+    def test_curl_command(self, curl_command: str) -> bool:
         context = uncurl.parse_context(curl_command)
         base_url = self.get_base_url(context.url)
         context.headers.pop("Accept-Encoding", None)
         response = self.client.get(
             base_url, headers=context.headers, cookies=context.cookies
         )
-        if response.status_code == 200:
-            ToonkorSettings.objects.update_or_create(
-                name="main", defaults={"curl_command": curl_command}
-            )
-            self.base_url = base_url
-            self.headers = context.headers
-            self.cookies = context.cookies
-            return True
-        return False
+        return response.status_code == 200
+
+    def set_curl_command(self, curl_command: str):
+        context = uncurl.parse_context(curl_command)
+        base_url = self.get_base_url(context.url)
+        context.headers.pop("Accept-Encoding", None)
+        self.base_url = base_url
+        self.headers = context.headers
+        self.cookies = context.cookies
 
     # Popular
     webtoons_request_path = "/%EC%9B%B9%ED%88%B0"

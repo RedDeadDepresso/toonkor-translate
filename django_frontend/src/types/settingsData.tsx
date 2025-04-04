@@ -6,10 +6,12 @@ interface SettingsData {
   displayEnglish: boolean;
   curlCommand: string;
   toonkorUrl: string;
+  translationPageLimit: number;
   read: readData;
   comicLoading: boolean;
   setCurlCommand: (value: string) => void;
   setToonkorUrl: (value: string) => void;
+  setTranslationPageLimit: (value: number) => void;
   setColorScheme: (value: MantineColorScheme) => void;
   setDisplayEnglish: (value: boolean) => void;
   setRead: (value: readData) => void;

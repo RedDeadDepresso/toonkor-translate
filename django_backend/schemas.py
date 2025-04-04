@@ -39,13 +39,15 @@ class ChapterPaginationSchema(Schema):
     pages: list[str]
 
 
-class SetCurlCommandSchema(Schema):
+class SetSettingsSchema(Schema):
     curl_command: str
+    translation_page_limit: int
 
 
-class ResponseCurlCommandSchema(Schema):
+class ResponseSettingsSchema(Schema):
     curl_command: str = ""
     toonkor_url: str = ""
+    translation_page_limit: int = 999
     error: str = ""
 
 

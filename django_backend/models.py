@@ -181,3 +181,7 @@ class ToonkorSettings(models.Model):
         blank=True,
         default="curl 'https://tkor08.com' --compressed -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0'",
     )
+    translation_page_limit = models.PositiveSmallIntegerField(default=999)
+
+    def __str__(self):
+        return self.name

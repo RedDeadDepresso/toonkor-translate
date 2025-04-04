@@ -20,8 +20,8 @@ from django_backend.schemas import (
     ChapterPaginationSchema,
     ChaptersSchema,
     ManhwaSchema,
-    ResponseCurlCommandSchema,
-    SetCurlCommandSchema,
+    ResponseSettingsSchema,
+    SetSettingsSchema,
 )
 from django_backend.toonkor_api import toonkor_api
 from django_backend.utils import (
@@ -85,22 +85,36 @@ def remove_manhwa(request, toonkor_id: str):
     return remove_manhwa_from_library(toonkor_id)
 
 
-@api.get("/curl_command", response=ResponseCurlCommandSchema)
-def get_curl_command(request):
+@api.get("/settings", response=ResponseSettingsSchema)
+def get_settings(request):
     toonkor_settings, _ = ToonkorSettings.objects.get_or_create(name="main")
     return {
         "curl_command": toonkor_settings.curl_command,
         "toonkor_url": toonkor_api.base_url,
+        "translation_page_limit": toonkor_settings.translation_page_limit,
     }
 
 
-@api.post("/curl_command", response=ResponseCurlCommandSchema)
-def set_curl_command(request, data: SetCurlCommandSchema):
+@api.post("/settings", response=ResponseSettingsSchema)
+def set_settings(request, data: SetSettingsSchema):
     try:
         curl_command = data.curl_command
-        if toonkor_api.set_curl_command(curl_command):
+        translation_page_limit = data.translation_page_limit
+        if toonkor_api.test_curl_command(curl_command):
+            ToonkorSettings.objects.update_or_create(
+                name="main",
+                defaults={
+                    "curl_command": curl_command,
+                    "translation_page_limit": translation_page_limit,
+                },
+            )
+            toonkor_api.set_curl_command(curl_command)
             reset_start_time()
-            return {"curl_command": curl_command, "toonkor_url": toonkor_api.base_url}
+            return {
+                "curl_command": curl_command,
+                "toonkor_url": toonkor_api.base_url,
+                "translation_page_limit": translation_page_limit,
+            }
         else:
             return {"error": "Invalid curl command"}
     except Exception as e:
@@ -108,8 +122,8 @@ def set_curl_command(request, data: SetCurlCommandSchema):
         return {"error": str(e)}
 
 
-@api.get("/thumbnail/{path:path}")  # <-- `:path` allows capturing full paths
-def get_thumbnail(request, path):  # Ensure underscores are not converted
+@api.get("/thumbnail/{path:path}")
+def get_thumbnail(request, path):
     try:
         response = toonkor_api.get_thumbnail(path)
 

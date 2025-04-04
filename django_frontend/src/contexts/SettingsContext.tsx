@@ -24,12 +24,16 @@ export const SettingsProvider = ({ children }: childrenProps) => {
     key: 'curl_command',
     defaultValue: ""
   })
+  const [translationPageLimit, setTranslationPageLimit] = useLocalStorage({
+    key: 'translation_page_limit',
+    defaultValue: 0,
+  });
   const [read, setRead] = useLocalStorage<readData>({ key: 'read', defaultValue: {} });
   const [comicLoading, setComicLoading] = useState<boolean>(false);
 
-  const requestUrl = async (apiUrl: string) => {
+  const fetchSettings = async () => {
     try {
-      const response = await fetch(apiUrl);
+      const response = await fetch('/api/settings');
       if (!response.ok) {
         throw new Error(`Response status: ${response.status}`);
       }
@@ -37,6 +41,7 @@ export const SettingsProvider = ({ children }: childrenProps) => {
       if (!json.error) {
         setCurlCommand(json.curl_command);
         setToonkorUrl(json.toonkor_url);
+        setTranslationPageLimit(json.translation_page_limit);
       }
     } catch (error: any) {
       console.error(error.message);
@@ -44,8 +49,8 @@ export const SettingsProvider = ({ children }: childrenProps) => {
   };
 
   useEffect(() => {
-    if (!curlCommand) requestUrl('/api/curl_command');
-  }, [curlCommand]);
+    if (!curlCommand || !toonkorUrl || !translationPageLimit) fetchSettings();
+  }, [curlCommand, toonkorUrl, translationPageLimit]);
 
   return (
     <SettingsContext.Provider
@@ -58,6 +63,8 @@ export const SettingsProvider = ({ children }: childrenProps) => {
         setCurlCommand,
         toonkorUrl,
         setToonkorUrl,
+        translationPageLimit,
+        setTranslationPageLimit,
         read,
         setRead,
         comicLoading,

@@ -1,18 +1,20 @@
 import json
+import time
+
+import django
+from PySide6.QtCore import QUrl
+from PySide6.QtWebSockets import QWebSocket
 
 from comic import *
 from modules.utils.file_handler import FileHandler
 from modules.utils.pipeline_utils import validate_settings
 from pipeline import *
-from PySide6.QtCore import QUrl
-from PySide6.QtWebSockets import QWebSocket
-from typing import Union
-import django
+
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_project.settings")
 django.setup()
 
-from django_backend.models import Chapter, StatusChoices
+from django_backend.models import Chapter, StatusChoices, ToonkorSettings
 
 
 class ManhwaFileHandler(FileHandler):
@@ -20,7 +22,61 @@ class ManhwaFileHandler(FileHandler):
         return file_paths
 
 
+class Scheduler:
+    def __init__(self):
+        toonkor_settings, _ = ToonkorSettings.objects.get_or_create("main")
+        self._page_count = 0
+        self.page_limit = toonkor_settings.translation_page_limit
+
+        self._start_time = 0
+        self.duration_limit = 60  # 1 minute in seconds
+        self._time_offset = 10
+
+    def start(self):
+        if not self.started():
+            self._start_time = time.time()
+            self._page_count = 0
+
+        return self
+
+    def started(self):
+        return bool(self._start_time)
+
+    def duration(self):
+        """
+        Returns:
+            float
+        """
+        if self.started():
+            return time.time() - self._start_time
+        else:
+            return 0.0
+
+    def check(self):
+        """
+        Wait until timer reached.
+        """
+        self._page_count += 1
+
+        if self._page_count == self.page_limit:
+            self._page_count = 0
+            duration = self.duration()
+
+            if duration < self.duration_limit:
+                waiting_time = self.duration_limit - duration + self._time_offset
+                self._start_time = 0
+                time.sleep(waiting_time)
+                return
+
+            start_time_offset = (duration % self.duration_limit) + self._time_offset
+            self._start_time = time.time() - start_time_offset
+
+
 class ManhwaPipeline(ComicTranslatePipeline):
+    def __init__(self, main_page):
+        super().__init__(main_page)
+        self.scheduler = Scheduler()
+
     def skip_save(
         self, directory, timestamp, base_name, extension, archive_bname, image
     ):
@@ -31,7 +87,7 @@ class ManhwaPipeline(ComicTranslatePipeline):
 
     def log_skipped_image(self, directory, timestamp, image_path):
         with open(
-            os.path.join(directory, f"translated", "skipped_images.txt"),
+            os.path.join(directory, "translated", "skipped_images.txt"),
             "a",
             encoding="UTF-8",
         ) as file:
@@ -41,6 +97,7 @@ class ManhwaPipeline(ComicTranslatePipeline):
         timestamp = datetime.now().strftime("%b-%d-%Y_%I-%M-%S%p")
         total_images = len(self.main_page.image_files)
 
+        self.scheduler.start()
         for index, image_path in enumerate(self.main_page.image_files):
             # index, step, total_steps, change_name
             self.main_page.progress_update.emit(index, total_images, 0, 10, True)
@@ -381,7 +438,7 @@ class ManhwaPipeline(ComicTranslatePipeline):
                 self.main_page.blk_list = blk_list
 
             # CHANGED: Save the rendered image to a different directory
-            render_save_dir = os.path.join(directory, f"translated", archive_bname)
+            render_save_dir = os.path.join(directory, "translated", archive_bname)
             if not os.path.exists(render_save_dir):
                 os.makedirs(render_save_dir, exist_ok=True)
             sv_pth = os.path.join(render_save_dir, f"{base_name}{extension}")
@@ -393,6 +450,8 @@ class ManhwaPipeline(ComicTranslatePipeline):
             renderer.save_image(sv_pth)
 
             self.main_page.progress_update.emit(index, total_images, 10, 10, False)
+
+            self.scheduler.check()
 
         archive_info_list = self.main_page.file_handler.archive_info
         if archive_info_list:
@@ -478,6 +537,7 @@ class ComicTranslateDjango(ComicTranslate):
         self.ready_event = ready_event
 
         self.connect_to_server()
+        self.translate_chapter()
 
     def connect_to_server(self):
         self.websocket.open(QUrl("ws://127.0.0.1:8000/ws/qt/"))
@@ -522,14 +582,14 @@ class ComicTranslateDjango(ComicTranslate):
             self.pipeline.batch_process,
             None,
             self.default_error_handler,
-            self.on_chapter_translate_finished(),
+            self.on_chapter_translate_finished,
         )
 
     def send_progress(self):
         reply = json.dumps(
             {
                 "task": "download_translate",
-                "toonkor_id": self.current_chaper.manhwa_id,
+                "toonkor_id": self.current_chaper.manhwa.toonkor_id,
                 "chapter": self.current_chaper.index,
             }
         )
@@ -547,11 +607,11 @@ class ComicTranslateDjango(ComicTranslate):
 
 def run_comic_translate(ready_event):
     import sys
-    from PySide6.QtGui import QIcon
-    from app.ui.dayu_widgets.qt import application
-    from app.translations import ct_translations
-    from app import icon_resource
+
     from PySide6.QtCore import QSettings
+    from PySide6.QtGui import QIcon
+
+    from app.ui.dayu_widgets.qt import application
 
     if sys.platform == "win32":
         # Necessary Workaround to set to Taskbar Icon on Windows
