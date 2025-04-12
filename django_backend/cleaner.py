@@ -27,10 +27,14 @@ class Cleaner:
 
         while True:
             try:
-                chapter_db = Chapter.objects.filter(
-                    Q(download_status=StatusChoices.REMOVING)
-                    | Q(translation_status=StatusChoices.REMOVING)
-                ).first()
+                chapter_db = (
+                    Chapter.objects.filter(
+                        Q(download_status=StatusChoices.REMOVING)
+                        | Q(translation_status=StatusChoices.REMOVING)
+                    )
+                    .order_by("last_edit", "index")
+                    .first()
+                )
 
                 if chapter_db is None:
                     return

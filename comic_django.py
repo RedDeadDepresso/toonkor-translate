@@ -552,10 +552,14 @@ class ComicTranslateDjango(ComicTranslate):
 
     def translate_chapter(self, message=None):
         if not self.current_chaper:
-            self.current_chaper = Chapter.objects.filter(
-                download_status=StatusChoices.READY,
-                translation_status=StatusChoices.LOADING,
-            ).first()
+            self.current_chaper = (
+                Chapter.objects.filter(
+                    download_status=StatusChoices.READY,
+                    translation_status=StatusChoices.LOADING,
+                )
+                .order_by("last_edit", "index")
+                .first()
+            )
 
         if self.current_chaper:
             self.run_threaded(

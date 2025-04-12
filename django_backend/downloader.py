@@ -30,9 +30,11 @@ class Downloader:
 
         while True:
             try:
-                chapter_db = Chapter.objects.filter(
-                    download_status=StatusChoices.LOADING
-                ).first()
+                chapter_db = (
+                    Chapter.objects.filter(download_status=StatusChoices.LOADING)
+                    .order_by("last_edit", "index")
+                    .first()
+                )
 
                 if chapter_db is None:
                     return

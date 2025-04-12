@@ -67,6 +67,8 @@ class Chapter(models.Model):
         max_length=20, choices=StatusChoices.choices, default=StatusChoices.NOT_READY
     )
 
+    last_edit = models.DateTimeField(auto_now=True)
+
     image_extensions = {".png", ".jpeg", ".jpg", ".webp", ".gif", ".svg"}
 
     class Meta:

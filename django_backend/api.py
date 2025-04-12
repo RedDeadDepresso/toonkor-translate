@@ -5,6 +5,7 @@ from channels.layers import get_channel_layer
 from django.forms.models import model_to_dict
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from ninja import NinjaAPI
 
 from django_backend.cleaner import cleaner
@@ -151,6 +152,7 @@ def download_chapters(request, data: ChaptersSchema):
         fields = {"download_status": StatusChoices.LOADING}
         if translation:
             fields["translation_status"] = StatusChoices.LOADING
+        fields["last_edit"] = timezone.now()
         chapters_db.update(**fields)
         downloader.start()
 
@@ -183,6 +185,7 @@ def delete_chapters(request, data: ChaptersSchema):
         fields = {"download_status": StatusChoices.REMOVING}
         if translation:
             fields["translation_status"] = StatusChoices.REMOVING
+        fields["last_edit"] = timezone.now()
         chapters_db.update(**fields)
 
         channel_layer = get_channel_layer()
