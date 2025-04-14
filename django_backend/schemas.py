@@ -29,6 +29,10 @@ class ManhwaSchema(Schema):
     toonkor_id: str
 
 
+class LibrarySchema(Schema):
+    toonkor_id: str
+
+
 class ChapterPaginationSchema(Schema):
     manhwa_id: str
     manhwa_title: str

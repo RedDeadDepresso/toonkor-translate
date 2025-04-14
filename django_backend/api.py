@@ -20,6 +20,7 @@ from django_backend.models import (
 from django_backend.schemas import (
     ChapterPaginationSchema,
     ChaptersSchema,
+    LibrarySchema,
     ManhwaSchema,
     ResponseSettingsSchema,
     SetSettingsSchema,
@@ -75,15 +76,15 @@ def get_manhwa(request, toonkor_id: str):
 
 
 @api.post("/manhwa", response=bool)
-def add_manhwa(request, toonkor_id: str):
+def add_manhwa(request, data: LibrarySchema):
     """Add a Manhwa to the library."""
-    return add_manhwa_to_library(toonkor_id)[0]
+    return add_manhwa_to_library(data.toonkor_id)[0]
 
 
 @api.delete("/manhwa", response=bool)
-def remove_manhwa(request, toonkor_id: str):
+def remove_manhwa(request, data: LibrarySchema):
     """Remove a Manhwa from the library."""
-    return remove_manhwa_from_library(toonkor_id)
+    return remove_manhwa_from_library(data.toonkor_id)
 
 
 @api.get("/settings", response=ResponseSettingsSchema)

@@ -177,6 +177,8 @@ def add_manhwa_to_library(toonkor_id: str) -> bool:
         if created:
             # Download and set the thumbnail
             img_url = manhwa_dict.get("thumbnail", "")
+            img_url = img_url.replace("/api/thumbnail", "", 1)
+            img_url = toonkor_api.base_url + img_url
             thumbnail_path = toonkor_api.download_thumbnail(manhwa, img_url)
             if thumbnail_path:
                 manhwa.thumbnail = thumbnail_path
