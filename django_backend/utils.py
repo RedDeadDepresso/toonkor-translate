@@ -146,7 +146,7 @@ def get_manhwa_details(toonkor_id: str) -> ManhwaSchema:
                     Chapter(**chapter_data, manhwa=manhwa_db)
                     for chapter_data in new_chapters
                 ]
-                Chapter.objects.bulk_create(new_chapters)
+                Chapter.objects.bulk_create(new_chapters, ignore_conflicts=True)
                 manhwa_dict["thumbnail"] = manhwa_db.thumbnail.url
 
     except Exception as e:
@@ -189,7 +189,7 @@ def add_manhwa_to_library(toonkor_id: str) -> bool:
                 Chapter(**chapter_data, manhwa=manhwa)
                 for chapter_data in manhwa_dict["chapters"]
             ]
-            Chapter.objects.bulk_create(chapters)
+            Chapter.objects.bulk_create(chapters, ignore_conflicts=True)
 
         return True, manhwa
     except Exception as e:
