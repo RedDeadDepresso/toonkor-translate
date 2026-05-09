@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=My Product
+Comment=A toonkor-translate application
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/toonkor-translate.exe %u
+Terminal=false
+Type=Application
+Icon=toonkor-translate.exe
+Categories=Utility;
+StartupWMClass=toonkor-translate.exe
+
+ 
