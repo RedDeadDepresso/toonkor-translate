@@ -1,0 +1,49 @@
+.header {
+  height: rem(56px);
+  background-color: var(--mantine-color-body);
+  border-bottom: rem(1px) solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.link {
+  display: block;
+  line-height: 1;
+  padding: rem(8px) rem(12px);
+  border-radius: var(--mantine-radius-sm);
+  text-decoration: none;
+  color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-0));
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+
+  @mixin hover {
+    background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  }
+}
+
+.searchContainer {
+  margin: auto;
+  flex-grow: 2;
+}
+
+.searchInput {
+  width: 100%;
+  @media screen and (min-width: $mantine-breakpoint-md) {
+    width: 60%;
+  }
+}
+
+.actionIcon {
+  border: 0;
+  background-color: inherit;
+}
+
+.mobileFooter {
+  position: fixed;
+  bottom: 0;
+  z-index: 50;
+}

@@ -21,11 +21,13 @@
     "storybook:build": "storybook build"
   },
   "dependencies": {
-    "@wailsio/runtime": "latest",
     "@mantine/core": "9.1.1",
     "@mantine/hooks": "9.1.1",
+    "@tabler/icons-react": "^3.44.0",
+    "@wailsio/runtime": "latest",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.9.4"
   },
   "devDependencies": {

@@ -1,0 +1,8 @@
+.rowSelected {
+    background-color: var(--mantine-color-blue-light);
+  }
+
+.tableContainer {
+  overflow: auto;
+  max-height: 80vh;
+}

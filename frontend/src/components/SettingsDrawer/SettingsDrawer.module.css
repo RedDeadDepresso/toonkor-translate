@@ -1,0 +1,26 @@
+.track {
+    margin-left: auto;
+}
+
+
+.input {
+    flex-grow: 1;
+}
+
+.title {
+    margin: 0;
+}
+
+.subTitle {
+    margin-bottom: 0;
+}
+
+.closeButton {
+    border: 0;
+    background-color: inherit;
+}
+
+.stack {
+    margin-left: 2rem;
+    margin-right: 2rem;
+}
