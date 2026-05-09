@@ -1,24 +1,59 @@
 {
-  "name": "react-ts-latest",
+  "name": "mantine-vite-template",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
+  "version": "0.0.0",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 9245 --strictPort",
     "build:dev": "tsc && vite build --minify false --mode development",
     "build": "tsc && vite build --mode production",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "npm run oxlint && npm run stylelint",
+    "oxlint": "oxlint .",
+    "stylelint": "stylelint '**/*.css' --cache",
+    "format:test": "oxfmt --check \"**/*.{ts,tsx,css}\"",
+    "format:write": "oxfmt --write \"**/*.{ts,tsx,css}\"",
+    "vitest": "vitest run",
+    "vitest:watch": "vitest",
+    "test": "npm run typecheck && npm run format:test && npm run lint && npm run vitest && npm run build",
+    "storybook": "storybook dev -p 6006",
+    "storybook:build": "storybook build"
   },
   "dependencies": {
     "@wailsio/runtime": "latest",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "@mantine/core": "9.1.1",
+    "@mantine/hooks": "9.1.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.4"
   },
   "devDependencies": {
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.11"
-  }
+    "@storybook/addon-themes": "^10.0.0",
+    "@storybook/react": "^10.0.0",
+    "@storybook/react-vite": "^10.0.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^25.0.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.1",
+    "@vitejs/plugin-react": "^6.0.0",
+    "identity-obj-proxy": "^3.0.0",
+    "jsdom": "^29.0.0",
+    "oxfmt": "^0.47.0",
+    "oxlint": "^1.58.0",
+    "postcss": "^8.5.6",
+    "postcss-preset-mantine": "1.18.0",
+    "postcss-simple-vars": "^7.0.1",
+    "prop-types": "^15.8.1",
+    "storybook": "^10.0.0",
+    "stylelint": "^17.0.0",
+    "stylelint-config-standard-scss": "^17.0.0",
+    "typescript": "6.0.3",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0"
+  },
+  "packageManager": "yarn@4.14.1"
 }
