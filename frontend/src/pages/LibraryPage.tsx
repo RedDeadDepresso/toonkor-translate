@@ -3,8 +3,8 @@ import { Center, Loader, Text } from "@mantine/core";
 import { ManhwaCardsGrid } from "@/components/ManhwaCardsGrid/ManhwaCardsGrid";
 import { NavBar } from "@/components/NavBar/NavBar";
 import { SettingsContext } from "@/contexts/SettingsContext";
-import { Manhwa } from "../../bindings/toonkor-translate/backend/models";
 import { Library } from "../../bindings/toonkor-translate/backend/backend";
+import { Manhwa } from "../../bindings/toonkor-translate/backend/models/models";
 
 const LibraryPage = () => {
   const [loading, setLoading] = useState(true);

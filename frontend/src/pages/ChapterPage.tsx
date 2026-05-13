@@ -16,11 +16,8 @@ import classes from "@/pages/ChapterPage.module.css";
 import { NavBar } from "@/components/NavBar/NavBar";
 import MenuLink from "@/components/MenuLinks/MenuLinks";
 import { SettingsContext } from "@/contexts/SettingsContext";
-import {
-  Chapter,
-  ChapterDetails,
-} from "../../bindings/toonkor-translate/backend/models";
 import { GetChapter } from "../../bindings/toonkor-translate/backend/backend";
+import { Chapter, ChapterDetails } from "../../bindings/toonkor-translate/backend/models/models";
 
 const displayTitle = (data: ChapterDetails, displayEnglish: boolean) => {
   const title =

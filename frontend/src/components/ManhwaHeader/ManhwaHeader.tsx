@@ -14,8 +14,12 @@ import Markdown from "react-markdown";
 import { IconHeart } from "@tabler/icons-react";
 import classes from "./ManhwaHeader.module.css";
 import { SettingsContext } from "@/contexts/SettingsContext";
-import { AddManhwa, BrowserOpenURL, RemoveManhwa } from "../../../bindings/toonkor-translate/backend/backend";
-import { Manhwa } from "../../../bindings/toonkor-translate/backend/models";
+import {
+  AddManhwa,
+  BrowserOpenURL,
+  RemoveManhwa,
+} from "../../../bindings/toonkor-translate/backend/backend";
+import { Manhwa } from "../../../bindings/toonkor-translate/backend/models/models";
 
 // Define props interface
 interface ManhwaHeaderProps {
@@ -89,7 +93,7 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const addToLibrary = async () => {
     try {
       setLibraryButtonState(LibraryButtonState.LOADING);
-      const added = await AddManhwa(manhwaData.toonkorId)
+      const added = await AddManhwa(manhwaData.toonkorId);
       if (added) {
         setLibraryButtonState(LibraryButtonState.ADDED);
       } else {
@@ -106,7 +110,7 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const removeFromLibrary = async () => {
     try {
       setLibraryButtonState(LibraryButtonState.LOADING);
-      const removed = await RemoveManhwa(manhwaData.toonkorId)
+      const removed = await RemoveManhwa(manhwaData.toonkorId);
       if (removed) {
         setLibraryButtonState(LibraryButtonState.NOT_ADDED);
       } else {

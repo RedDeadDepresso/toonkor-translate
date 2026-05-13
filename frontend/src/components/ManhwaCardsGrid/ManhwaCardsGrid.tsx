@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useContext } from 'react';
 import classes from './ManhwaCardsGrid.module.css';
 import { SettingsContext } from '@/contexts/SettingsContext';
-import { Manhwa } from '../../../bindings/toonkor-translate/backend/models';
+import { Manhwa } from '../../../bindings/toonkor-translate/backend/models/models';
 
 interface ManhwaCardsGridProps {
   data: Manhwa[];

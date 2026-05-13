@@ -2,7 +2,10 @@ import { FloatingPosition, Menu, rem } from "@mantine/core";
 import { IconDownload, IconLanguage, IconWorld } from "@tabler/icons-react";
 import { ReactNode } from "react";
 import useOpenURL from "@/hooks/useOpenURL";
-import { Chapter, Status } from "../../../bindings/toonkor-translate/backend/models";
+import {
+  Chapter,
+  Status,
+} from "../../../bindings/toonkor-translate/backend/models/models";
 
 interface MenuLinkProps {
   children: ReactNode;

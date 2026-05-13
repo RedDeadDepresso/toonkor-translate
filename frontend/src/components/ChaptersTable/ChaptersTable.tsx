@@ -25,7 +25,7 @@ import useOpenURL from "@/hooks/useOpenURL";
 import {
   Chapter,
   Status,
-} from "../../../bindings/toonkor-translate/backend/models";
+} from "../../../bindings/toonkor-translate/backend/models/models";
 import {
   DeleteChapters,
   DownloadChapters,

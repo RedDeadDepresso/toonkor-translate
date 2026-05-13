@@ -3,8 +3,8 @@ import { Loader, Stack, Text, Title } from "@mantine/core";
 import { useIsFirstRender } from "@mantine/hooks";
 import { ManhwaCardsGrid } from "@/components/ManhwaCardsGrid/ManhwaCardsGrid";
 import { NavBar } from "@/components/NavBar/NavBar";
-import { Manhwa } from "../../bindings/toonkor-translate/backend/models";
 import { Browse } from "../../bindings/toonkor-translate/backend/backend";
+import { Manhwa } from "../../bindings/toonkor-translate/backend/models/models";
 
 const BrowsePage = () => {
   const firstRender = useIsFirstRender();

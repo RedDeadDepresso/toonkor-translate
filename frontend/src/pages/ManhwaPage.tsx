@@ -5,8 +5,8 @@ import { ManhwaHeader } from "@/components/ManhwaHeader/ManhwaHeader";
 import { NavBar } from "@/components/NavBar/NavBar";
 import ChaptersTable from "@/components/ChaptersTable/ChaptersTable";
 import { SettingsContext } from "@/contexts/SettingsContext";
-import { Manhwa } from "../../bindings/toonkor-translate/backend/models";
 import { GetManhwa } from "../../bindings/toonkor-translate/backend/backend";
+import { Manhwa } from "../../bindings/toonkor-translate/backend/models/models";
 
 const ManhwaPage = () => {
   const { toonkorId } = useParams<string>();

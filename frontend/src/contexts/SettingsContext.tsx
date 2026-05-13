@@ -33,6 +33,22 @@ export const SettingsProvider = ({ children }: childrenProps) => {
     key: "translation_page_limit",
     defaultValue: 0,
   });
+  const [llmKind, setLlmKind] = useLocalStorage({
+    key: "llm_kind",
+    defaultValue: "provider",
+  });
+  const [llmProviderID, setLlmProviderID] = useLocalStorage({
+    key: "llm_provider_id",
+    defaultValue: "openai",
+  });
+  const [llmModelID, setLlmModelID] = useLocalStorage({
+    key: "llm_model_id",
+    defaultValue: "gpt-4o-mini",
+  });
+  const [llmApiKey, setLlmApiKey] = useLocalStorage({
+    key: "llm_api_key",
+    defaultValue: "",
+  });
   const [read, setRead] = useLocalStorage<readData>({
     key: "read",
     defaultValue: {},
@@ -46,6 +62,10 @@ export const SettingsProvider = ({ children }: childrenProps) => {
       setToonkorUrl(settings.toonkorUrl);
       setTranslationPageLimit(settings.translationPageLimit);
       setKoharuPath(settings.koharuPath);
+      setLlmKind(settings.llmKind || "provider");
+      setLlmProviderID(settings.llmProviderId || "openai");
+      setLlmModelID(settings.llmModelId || "gpt-4o-mini");
+      setLlmApiKey(settings.llmApiKey || "");
     } catch (error: any) {
       console.error(error.message);
     }
@@ -71,6 +91,14 @@ export const SettingsProvider = ({ children }: childrenProps) => {
         setKoharuPath,
         translationPageLimit,
         setTranslationPageLimit,
+        llmKind,
+        setLlmKind,
+        llmProviderID,
+        setLlmProviderID,
+        llmModelID,
+        setLlmModelID,
+        llmApiKey,
+        setLlmApiKey,
         read,
         setRead,
         comicLoading,
