@@ -69,7 +69,11 @@ func (b *Backend) Browse(query string) ([]models.Manhwa, error) {
 	}
 	results, err := services.MangaDexClient.Search(query)
 	if (err == nil) {
-		results, err = services.ToonkorClient.MultiUpdateMangadexSearch(results)
+		if (len(results) == 0) {
+			results, err = services.ToonkorClient.Search(query)
+		} else {
+			results, err = services.ToonkorClient.MultiUpdateMangadexSearch(results)
+		}
 	}
 	return results, err
 }
