@@ -2,11 +2,11 @@ import { SimpleGrid, Card, Image, Text, AspectRatio } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 import { useContext } from 'react';
 import classes from './ManhwaCardsGrid.module.css';
-import ManhwaData from '@/types/manhwaData';
 import { SettingsContext } from '@/contexts/SettingsContext';
+import { Manhwa } from '../../../bindings/toonkor-translate/backend/models';
 
 interface ManhwaCardsGridProps {
-  data: ManhwaData[];
+  data: Manhwa[];
 }
 
 export function ManhwaCardsGrid({ data }: ManhwaCardsGridProps) {
@@ -15,29 +15,28 @@ export function ManhwaCardsGrid({ data }: ManhwaCardsGridProps) {
 
   data.sort((a, b) => {
     if (displayEnglish) {
-      return a.en_title.localeCompare(b.en_title);
+      return a.enTitle.localeCompare(b.enTitle);
     }
       return a.title.localeCompare(b.title);
   });
 
-  const cards = data.map((manhwaData) => (
+  const cards = data.map((manhwa) => (
     <Card
-      key={manhwaData.title}
+      key={manhwa.title}
       p="md"
       radius="md"
       component="a"
-      href={`/manhwa${manhwaData.toonkor_id}`}
       onClick={(event) => {
         event.preventDefault();
-        navigate(`/manhwa${manhwaData.toonkor_id}`);
+        navigate(`/manhwa/${manhwa.toonkorId}`);
       }}
       className={classes.card}
     >
       <AspectRatio ratio={1920 / 1080}>
-        <Image src={manhwaData.thumbnail} />
+        <Image src={manhwa.thumbnail} />
       </AspectRatio>
       <Text className={classes.title} mx={5} ta="center">
-        {displayEnglish && manhwaData.en_title ? manhwaData.en_title : manhwaData.title}
+        {displayEnglish && manhwa.enTitle ? manhwa.enTitle : manhwa.title}
       </Text>
     </Card>
   ));

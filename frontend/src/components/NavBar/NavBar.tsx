@@ -32,9 +32,8 @@ export function NavBar({
   const { comicLoading, setComicLoading } = useContext(SettingsContext);
   const matches = useMediaQuery('(min-width: 1024px)');
 
-  const openComicTranslate = async () => {
+  const openKoharu = async () => {
     setComicLoading(true);
-    await fetch('/api/open_comic');
     setComicLoading(false);
   };
 
@@ -86,14 +85,14 @@ export function NavBar({
           )}
           <Group visibleFrom="md">
             <SettingsDrawer settingsOpened={settingsOpened} closeSettings={closeSettings} />
-            <Tooltip label="Open Comic Translate">
+            <Tooltip label="Open Koharu">
               <ActionIcon
                 className={classes.actionIcon}
                 loading={comicLoading}
                 variant="default"
                 size="xl"
                 radius="xl"
-                onClick={openComicTranslate}
+                onClick={openKoharu}
               >
                 <IconAppWindow />
               </ActionIcon>
@@ -140,14 +139,14 @@ export function NavBar({
         <Button
           h={70}
           variant="default"
-          onClick={openComicTranslate}
+          onClick={openKoharu}
           flex={1}
           radius={0}
           loading={comicLoading}
         >
           <Stack justify="center" align="center" gap={2}>
             <IconAppWindow size={28} stroke={1.5} />
-            <Text>Open CT</Text>
+            <Text>Open Koharu</Text>
           </Stack>
         </Button>
         <Button h={70} variant="default" onClick={openSettings} flex={1} radius={0}>

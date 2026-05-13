@@ -1,29 +1,29 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import Library from './pages/Library';
-import Browse from './pages/Browse';
-import Manhwa from './pages/Manhwa';
-import Chapter from './pages/Chapter';
+import BrowsePage from './pages/BrowsePage';
+import LibraryPage from './pages/LibraryPage';
+import ChapterPage from './pages/ChapterPage';
+import ManhwaPage from './pages/ManhwaPage';
 
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <Library />,
+    element: <LibraryPage />,
   },
   {
     path: '/manhwa/:toonkorId',
-    element: <Manhwa />,
+    element: <ManhwaPage />,
   },
   {
     path: '/chapter/:toonkorId/:choice',
-    element: <Chapter />,
+    element: <ChapterPage />,
   },
   {
     path: '/library',
-    element: <Library />,
+    element: <LibraryPage />,
   },
   {
     path: '/browse',
-    element: <Browse />,
+    element: <BrowsePage />,
   },
 ]);
 

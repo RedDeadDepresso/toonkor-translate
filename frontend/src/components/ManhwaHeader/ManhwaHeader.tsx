@@ -8,17 +8,18 @@ import {
   ActionIcon,
   AspectRatio,
   rem,
-} from '@mantine/core';
-import { useContext, useState } from 'react';
-import Markdown from 'react-markdown';
-import { IconHeart } from '@tabler/icons-react';
-import classes from './ManhwaHeader.module.css';
-import { SettingsContext } from '@/contexts/SettingsContext';
-import ManhwaData from '@/types/manhwaData';
+} from "@mantine/core";
+import { useContext, useState } from "react";
+import Markdown from "react-markdown";
+import { IconHeart } from "@tabler/icons-react";
+import classes from "./ManhwaHeader.module.css";
+import { SettingsContext } from "@/contexts/SettingsContext";
+import { AddManhwa, BrowserOpenURL, RemoveManhwa } from "../../../bindings/toonkor-translate/backend/backend";
+import { Manhwa } from "../../../bindings/toonkor-translate/backend/models";
 
 // Define props interface
 interface ManhwaHeaderProps {
-  manhwaData: ManhwaData;
+  manhwaData: Manhwa;
 }
 
 enum LibraryButtonState {
@@ -32,12 +33,10 @@ const renderLinkButton = (href: string, src: string, label: string) => (
   <Tooltip label={label}>
     <ActionIcon
       variant="default"
-      component="a"
-      href={href}
-      target="_blank"
       size={70}
       aria-label={label}
       className={classes.linkButton}
+      onClick={() => BrowserOpenURL(href)}
     >
       <AspectRatio ratio={192 / 192}>
         <img src={src} alt={label} />
@@ -46,56 +45,59 @@ const renderLinkButton = (href: string, src: string, label: string) => (
   </Tooltip>
 );
 
-const renderBatotoButton = (title: string) => {
-  const batotoLink = `https://batocomic.com/v3x-search?word=${title}`;
-  return renderLinkButton(batotoLink, '/images/batoto-logo.png', 'Open Batoto URL');
+const renderComixButton = (title: string) => {
+  const comixLink = `https://comix.to/browse?q=${title}`;
+  return renderLinkButton(
+    comixLink,
+    "/images/comix-logo.png",
+    "Open Comix URL",
+  );
 };
 
-const renderMangadexButton = (manhwaData: ManhwaData) => {
-  const mangadexLink = manhwaData.mangadex_id
-    ? `https://mangadex.org/title/${manhwaData.mangadex_id}`
+const renderMangadexButton = (manhwaData: Manhwa) => {
+  const mangadexLink = manhwaData.mangaDexId
+    ? `https://mangadex.org/title/${manhwaData.mangaDexId}`
     : `https://mangadex.org/search?q=${manhwaData.title}`;
-  console.log(mangadexLink);
 
-  return renderLinkButton(mangadexLink, '/images/mangadex-logo.png', 'Open Mangadex URL');
+  return renderLinkButton(
+    mangadexLink,
+    "/images/mangadex-logo.png",
+    "Open Mangadex URL",
+  );
 };
 
 // Main component function
 export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const { displayEnglish } = useContext(SettingsContext);
-  const initialState = manhwaData.in_library
+  const initialState = manhwaData.inLibrary
     ? LibraryButtonState.ADDED
     : LibraryButtonState.NOT_ADDED;
-  const [libraryButtonState, setLibraryButtonState] = useState<LibraryButtonState>(initialState);
+  const [libraryButtonState, setLibraryButtonState] =
+    useState<LibraryButtonState>(initialState);
   const { toonkorUrl } = useContext(SettingsContext);
 
   // Determine displayed title and description based on context setting
-  const title = displayEnglish && manhwaData.en_title ? manhwaData.en_title : manhwaData.title;
+  const title =
+    displayEnglish && manhwaData.enTitle
+      ? manhwaData.enTitle
+      : manhwaData.title;
   const description =
-    displayEnglish && manhwaData.en_description
-      ? manhwaData.en_description
+    displayEnglish && manhwaData.enDescription
+      ? manhwaData.enDescription
       : manhwaData.description;
 
   const addToLibrary = async () => {
     try {
       setLibraryButtonState(LibraryButtonState.LOADING);
-      const response = await fetch('/api/manhwa', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ toonkor_id: manhwaData.toonkor_id }),
-      });
-      const added = await response.json();
+      const added = await AddManhwa(manhwaData.toonkorId)
       if (added) {
-        console.log('Added');
         setLibraryButtonState(LibraryButtonState.ADDED);
       } else {
         // Handle the case where addition failed
         setLibraryButtonState(LibraryButtonState.NOT_ADDED);
       }
     } catch (error) {
-      console.error('Failed to add to library', error);
+      console.error("Failed to add to library", error);
       // Handle error state
       setLibraryButtonState(LibraryButtonState.NOT_ADDED);
     }
@@ -104,23 +106,15 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const removeFromLibrary = async () => {
     try {
       setLibraryButtonState(LibraryButtonState.LOADING);
-      const response = await fetch('/api/manhwa', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ toonkor_id: manhwaData.toonkor_id }),
-      });
-      const removed = await response.json();
+      const removed = await RemoveManhwa(manhwaData.toonkorId)
       if (removed) {
-        console.log('Removed');
         setLibraryButtonState(LibraryButtonState.NOT_ADDED);
       } else {
         // Handle the case where removal failed
         setLibraryButtonState(LibraryButtonState.ADDED);
       }
     } catch (error) {
-      console.error('Failed to remove from library', error);
+      console.error("Failed to remove from library", error);
       // Handle error state
       setLibraryButtonState(LibraryButtonState.ADDED);
     }
@@ -128,32 +122,38 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
 
   const renderLibraryButton = (state: LibraryButtonState) => {
     if (state === LibraryButtonState.ADDED) {
-return (
+      return (
         <Button
           h={55}
           leftSection={<IconHeart size={25} />}
           onClick={removeFromLibrary}
-          w={rem('376px')}
+          w={rem("376px")}
         >
           In Library
         </Button>
       );
-}
+    }
     if (state === LibraryButtonState.NOT_ADDED) {
-return (
+      return (
         <Button
           h={55}
           leftSection={<IconHeart size={25} />}
           variant="default"
           onClick={addToLibrary}
-          w={rem('376px')}
+          w={rem("376px")}
         >
           Add to Library
         </Button>
       );
-}
+    }
     return (
-      <Button h={55} loading loaderProps={{ type: 'dots' }} variant="default" w={rem('376px')}>
+      <Button
+        h={55}
+        loading
+        loaderProps={{ type: "dots" }}
+        variant="default"
+        w={rem("376px")}
+      >
         Loading
       </Button>
     );
@@ -166,17 +166,21 @@ return (
         <Title className={classes.title}>{title}</Title>
 
         {/* Thumbnail Image */}
-        <Image src={manhwaData.thumbnail} className={classes.image} radius="md" />
+        <Image
+          src={manhwaData.thumbnail}
+          className={classes.image}
+          radius="md"
+        />
 
         {/* Links Group */}
         {renderLibraryButton(libraryButtonState)}
         <Group gap="sm" justify="center">
-          {renderBatotoButton(title)}
+          {renderComixButton(title)}
           {renderMangadexButton(manhwaData)}
           {renderLinkButton(
-            `${toonkorUrl}${manhwaData.toonkor_id}`,
-            '/images/toonkor-logo.png',
-            'Open Toonkor URL'
+            `${toonkorUrl}/${manhwaData.toonkorId}`,
+            "/images/toonkor-logo.png",
+            "Open Toonkor URL",
           )}
         </Group>
 

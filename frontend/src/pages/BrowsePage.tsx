@@ -1,36 +1,32 @@
-import { useState } from 'react';
-import { Loader, Stack, Text, Title } from '@mantine/core';
-import { useIsFirstRender } from '@mantine/hooks';
-import { ManhwaCardsGrid } from '@/components/ManhwaCardsGrid/ManhwaCardsGrid';
-import ManhwaData from '@/types/manhwaData';
-import { NavBar } from '@/components/NavBar/NavBar';
+import { useState } from "react";
+import { Loader, Stack, Text, Title } from "@mantine/core";
+import { useIsFirstRender } from "@mantine/hooks";
+import { ManhwaCardsGrid } from "@/components/ManhwaCardsGrid/ManhwaCardsGrid";
+import { NavBar } from "@/components/NavBar/NavBar";
+import { Manhwa } from "../../bindings/toonkor-translate/backend/models";
+import { Browse } from "../../bindings/toonkor-translate/backend/backend";
 
-const Browse = () => {
+const BrowsePage = () => {
   const firstRender = useIsFirstRender();
-  const [manhwaList, setManhwaList] = useState<ManhwaData[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [manhwaList, setManhwaList] = useState<Manhwa[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-  document.title = 'Browse';
+  document.title = "Browse";
 
   const onSearchChange = async (searchQuery: string) => {
     if (!searchQuery) {
       return;
     }
     setLoading(true);
-    errorMessage && setErrorMessage('');
-    const url = `/api/browse?query=${searchQuery}`;
+    errorMessage && setErrorMessage("");
     try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        setErrorMessage(`Response status: ${response.status}`);
-      }
-      const json = await response.json();
-      setManhwaList(json);
+      const results = await Browse(searchQuery);
+      setManhwaList(results);
     } catch (error) {
       if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage('An unknown error occurred.');
+        setErrorMessage("An unknown error occurred.");
       }
     }
     setLoading(false);
@@ -59,4 +55,4 @@ const Browse = () => {
   );
 };
 
-export default Browse;
+export default BrowsePage;
