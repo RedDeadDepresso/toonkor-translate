@@ -251,6 +251,9 @@ func (t *toonkorClient) GetManhwaDetails(
 			if cached.UploadedDate != "" {
 				chapter.UploadedDate = cached.UploadedDate
 			}
+			fmt.Println(cached)
+			chapter.DownloadStatus = cached.DownloadStatus
+			chapter.TranslationStatus = cached.TranslationStatus
 
 		} else {
 

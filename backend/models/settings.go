@@ -14,6 +14,15 @@ type Settings struct {
 	TranslationPageLimit uint   `json:"translationPageLimit"`
 	ToonkorURL           string `json:"toonkorUrl"`
 	KoharuPath           string `json:"koharuPath"`
+	// LLM settings: "local" or "provider"
+	LLMKind       string `json:"llmKind"`
+	// For kind="local": the local model id (e.g. "gguf:llama-...")
+	// For kind="provider": the model id within the provider (e.g. "gpt-4o")
+	LLMModelID    string `json:"llmModelId"`
+	// For kind="provider": the provider id (e.g. "openai", "gemini", "claude")
+	LLMProviderID string `json:"llmProviderId"`
+	// API key for the chosen provider (stored in DB for simplicity)
+	LLMApiKey     string `json:"llmApiKey"`
 }
 
 func koharuDefaultPath() string {
@@ -40,6 +49,9 @@ func MainSettings() *Settings {
 			TranslationPageLimit: 15,
 			ToonkorURL: "https://tkor116.com",
 			KoharuPath: koharuDefaultPath(),
+			LLMKind:    "provider",
+			LLMProviderID: "openai",
+			LLMModelID: "gpt-4o-mini",
 		}).
 		FirstOrCreate(&settings)
 

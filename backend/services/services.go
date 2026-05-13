@@ -64,11 +64,7 @@ func  GetDBChaptersMap(
 
 	for _, chapter := range manhwa.Chapters {
 
-		output[chapter.Index] = models.Chapter{
-			Index:      chapter.Index,
-			ToonkorID:  chapter.ToonkorID,
-			UploadedDate: chapter.UploadedDate,
-		}
+		output[chapter.Index] = chapter
 	}
 
 	return output

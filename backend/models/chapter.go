@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"toonkor-translate/backend/utils"
@@ -101,13 +102,26 @@ func isPage(file string) bool {
 	return IsDigit(root) && ImageExtensions.Has(ext)
 }
 
-// pages scans the physical disk and returns full physical paths
+func getFileNumericValue(path string) int {
+	// Get "10.jpg" from "path/to/10.jpg"
+	base := filepath.Base(path)
+	// Remove extension to get "10"
+	nameOnly := strings.TrimSuffix(base, filepath.Ext(base))
+	
+	val, err := strconv.Atoi(nameOnly)
+	if err != nil {
+		// If it's not a number, treat it as 0 or handle as needed
+		return 0
+	}
+	return val
+}
+
+// pages scans the physical disk and returns full physical paths sorted numerically
 func pages(pagesPath string) []string {
 	var pages []string
 
 	files, err := os.ReadDir(pagesPath)
 	if err != nil {
-		// Return empty slice instead of killing the process
 		log.Printf("Error reading directory %s: %v", pagesPath, err)
 		return pages
 	}
@@ -118,11 +132,15 @@ func pages(pagesPath string) []string {
 		}
 	}
 
-	slices.Sort(pages)
+	// Sort numerically based on the filename integer
+	slices.SortFunc(pages, func(a, b string) int {
+		return getFileNumericValue(a) - getFileNumericValue(b)
+	})
+
 	return pages
 }
 
-// mediaPages scans physical disk but returns formatted URL paths for the frontend
+// mediaPages scans physical disk and returns URL paths sorted numerically
 func mediaPages(physicalPath string, mediaPrefix string) []string {
 	var pages []string
 
@@ -134,15 +152,17 @@ func mediaPages(physicalPath string, mediaPrefix string) []string {
 
 	for _, file := range files {
 		if !file.IsDir() && isPage(file.Name()) {
-			// Join with forward slashes for URLs
 			pages = append(pages, fmt.Sprintf("%s/%s", mediaPrefix, file.Name()))
 		}
 	}
 
-	slices.Sort(pages)
+	// Sort numerically based on the filename integer
+	slices.SortFunc(pages, func(a, b string) int {
+		return getFileNumericValue(a) - getFileNumericValue(b)
+	})
+
 	return pages
 }
-
 // --- Receiver Methods ---
 
 func (chapter *Chapter) DownloadPages() []string {

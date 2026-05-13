@@ -20,7 +20,7 @@ type Backend struct {
 }
 
 func NewBackend() *Backend {
-	database.Init()
+	database.Init(&models.Settings{}, &models.Manhwa{}, &models.Chapter{})
 	err := database.DB.AutoMigrate(&models.Settings{}, &models.Manhwa{}, &models.Chapter{}) 
 		if err != nil {
 			log.Fatal("Failed to migrate database:", err)
@@ -96,7 +96,7 @@ func (b *Backend) GetSettings() models.Settings {
 	return *settings
 }
 
-func (b *Backend) SetSettings(curlCommand string, koharuPath string, translationPageLimit uint) (models.Settings, error) {
+func (b *Backend) SetSettings(curlCommand string, koharuPath string, translationPageLimit uint, llmKind string, llmProviderID string, llmModelID string, llmApiKey string) (models.Settings, error) {
 	if (!services.ToonkorClient.TestCurlCommand(curlCommand)) {
 		err := fmt.Errorf("Invalid curl command")
 		return models.Settings{}, err
@@ -111,12 +111,50 @@ func (b *Backend) SetSettings(curlCommand string, koharuPath string, translation
 	database.DB.Where(models.Settings{Name: "main"}).
 		Assign(models.Settings{
 			CurlCommand:          curlCommand,
-			KoharuPath: koharuPath,
+			KoharuPath:           koharuPath,
 			TranslationPageLimit: translationPageLimit,
 			ToonkorURL:           services.ToonkorClient.GetBaseURL(),
+			LLMKind:              llmKind,
+			LLMProviderID:        llmProviderID,
+			LLMModelID:           llmModelID,
+			LLMApiKey:            llmApiKey,
 		}).
 		FirstOrCreate(&settings)
 	return settings, nil
+}
+
+type LLMModel struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type LLMCatalog struct {
+	Local    []LLMModel `json:"local"`
+	Provider []LLMModel `json:"provider"`
+}
+
+func (b *Backend) GetLLMCatalog() (LLMCatalog, error) {
+	settings := models.MainSettings()
+	if !services.KoharuClient.IsRunning() {
+		if settings.KoharuPath == "" {
+			return LLMCatalog{}, fmt.Errorf("Koharu path not configured")
+		}
+		if err := services.KoharuClient.Start(settings.KoharuPath, 17173); err != nil {
+			return LLMCatalog{}, err
+		}
+	}
+	catalog, err := services.KoharuClient.GetLLMCatalog()
+	if err != nil {
+		return LLMCatalog{}, err
+	}
+	result := LLMCatalog{}
+	for _, m := range catalog.Local {
+		result.Local = append(result.Local, LLMModel{ID: m.ID, Name: m.Name})
+	}
+	for _, m := range catalog.Provider {
+		result.Provider = append(result.Provider, LLMModel{ID: m.ID, Name: m.Name})
+	}
+	return result, nil
 }
 
 func (b *Backend) DownloadChapters(chapters []models.Chapter, translation bool) ([]models.Chapter, bool) {

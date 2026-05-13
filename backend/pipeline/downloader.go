@@ -9,7 +9,7 @@ import (
 )
 
 type downloader struct {
-	isRunning bool
+	isRunning    bool
 	eventManager *application.EventManager
 }
 
@@ -25,19 +25,18 @@ func (d *downloader) SetEventManager(eventManager *application.EventManager) {
 }
 
 func (d *downloader) downloadChapters() {
-	for (true) {
+	defer func() { d.isRunning = false }()
+
+	for {
 		var chapters []models.Chapter
 
-		// 1. Fetch the first record matching criteria
+		// 1. Fetch the next chapter queued for download.
 		result := database.DB.
 			Preload("Manhwa").
 			Where("download_status = ?", models.Loading).
 			Order("updated_at ASC, `index` ASC").
 			Limit(1).
 			Find(&chapters)
-
-		// 2. Handle the "Not Found" case
-		// GORM returns ErrRecordNotFound if no row matches
 
 		if result.Error != nil {
 			continue
@@ -49,27 +48,29 @@ func (d *downloader) downloadChapters() {
 
 		chapter := chapters[0]
 
-		// 3. Call the API/Downloader
-		pagePaths, err := services.ToonkorClient.DownloadChapter(&chapter)
+		// 2. Download the pages via the Toonkor service.
+		_, err := services.ToonkorClient.DownloadChapter(&chapter)
 
-		if (err != nil) {
-			database.DB.Model(&chapter).Update("download_status", models.Ready)
+		if err != nil {
+			// Mark as not-ready so the user can retry.
+			database.DB.Model(&chapter).Update("download_status", models.NotReady)
 			d.emitChapter(&chapter)
 			continue
 		}
 
-		// 4. Update the record if successful
-		if len(pagePaths) > 0 {
-			// Save the specific changes
-			database.DB.Model(&chapter).Update("download_status", models.Ready)	
-			d.emitChapter(&chapter)
+		// 3. Mark download as ready.
+		database.DB.Model(&chapter).Update("download_status", models.Ready)
+		d.emitChapter(&chapter)
+
+		// 4. If the chapter was also queued for translation, kick the translator.
+		if chapter.TranslationStatus == models.Loading {
+			Translator.Start()
 		}
 	}
-	d.isRunning = false
 }
 
 func (d *downloader) emitChapter(chapter *models.Chapter) {
-	if (d.eventManager != nil) {
+	if d.eventManager != nil {
 		d.eventManager.Emit(chapter.Manhwa.ToonkorID, *chapter)
 	}
 }
