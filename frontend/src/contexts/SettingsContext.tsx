@@ -45,15 +45,15 @@ export const SettingsProvider = ({ children }: childrenProps) => {
     key: "llm_model_id",
     defaultValue: "gpt-4o-mini",
   });
-  const [llmApiKey, setLlmApiKey] = useLocalStorage({
-    key: "llm_api_key",
+  const [ocrEngine, setOcrEngine] = useLocalStorage({
+    key: "ocr_engine",
     defaultValue: "",
   });
   const [read, setRead] = useLocalStorage<readData>({
     key: "read",
     defaultValue: {},
   });
-  const [comicLoading, setComicLoading] = useState<boolean>(false);
+  const [koharuLoading, setKoharuLoading] = useState<boolean>(false);
 
   const fetchSettings = async () => {
     try {
@@ -65,7 +65,7 @@ export const SettingsProvider = ({ children }: childrenProps) => {
       setLlmKind(settings.llmKind || "provider");
       setLlmProviderID(settings.llmProviderId || "openai");
       setLlmModelID(settings.llmModelId || "gpt-4o-mini");
-      setLlmApiKey(settings.llmApiKey || "");
+      setOcrEngine(settings.ocrEngine || "");
     } catch (error: any) {
       console.error(error.message);
     }
@@ -97,12 +97,12 @@ export const SettingsProvider = ({ children }: childrenProps) => {
         setLlmProviderID,
         llmModelID,
         setLlmModelID,
-        llmApiKey,
-        setLlmApiKey,
+        ocrEngine,
+        setOcrEngine,
         read,
         setRead,
-        comicLoading,
-        setComicLoading,
+        koharuLoading,
+        setKoharuLoading,
       }}
     >
       {children}

@@ -7,6 +7,7 @@ import classes from './NavBar.module.css';
 import SettingsDrawer from '../SettingsDrawer/SettingsDrawer';
 import { SettingsContext } from '@/contexts/SettingsContext';
 import icon from '@/favicon.svg';
+import { OpenKoharu } from '../../../bindings/toonkor-translate/backend/backend';
 
 interface searchBarProps {
   showSearchBar: boolean;
@@ -29,12 +30,18 @@ export function NavBar({
   const navigate = useNavigate();
   const [settingsOpened, { open: openSettings, close: closeSettings }] = useDisclosure(false);
   const [searchValue, setSearchValue] = useInputState<string>('');
-  const { comicLoading, setComicLoading } = useContext(SettingsContext);
+  const { koharuLoading, setKoharuLoading } = useContext(SettingsContext);
   const matches = useMediaQuery('(min-width: 1024px)');
 
   const openKoharu = async () => {
-    setComicLoading(true);
-    setComicLoading(false);
+    setKoharuLoading(true);
+    try {
+      await OpenKoharu();
+    } catch (e) {
+      console.error('Failed to open Koharu:', e);
+    } finally {
+      setKoharuLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -88,7 +95,7 @@ export function NavBar({
             <Tooltip label="Open Koharu">
               <ActionIcon
                 className={classes.actionIcon}
-                loading={comicLoading}
+                loading={koharuLoading}
                 variant="default"
                 size="xl"
                 radius="xl"
@@ -142,7 +149,7 @@ export function NavBar({
           onClick={openKoharu}
           flex={1}
           radius={0}
-          loading={comicLoading}
+          loading={koharuLoading}
         >
           <Stack justify="center" align="center" gap={2}>
             <IconAppWindow size={28} stroke={1.5} />

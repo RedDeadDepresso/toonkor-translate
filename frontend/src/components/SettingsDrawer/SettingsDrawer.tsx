@@ -1,12 +1,12 @@
 import { useContext, useEffect, useState } from "react";
 import {
   ActionIcon,
+  Badge,
   Button,
   Divider,
   Drawer,
   Group,
   NumberInput,
-  PasswordInput,
   Select,
   Space,
   Stack,
@@ -29,12 +29,28 @@ interface SettingsDrawerProps {
   closeSettings: () => void;
 }
 
-const PROVIDER_OPTIONS = [
-  { value: "openai", label: "OpenAI" },
-  { value: "gemini", label: "Gemini" },
-  { value: "claude", label: "Anthropic Claude" },
-  { value: "deepseek", label: "DeepSeek" },
-  { value: "openai-compatible", label: "OpenAI Compatible" },
+interface LLMModel {
+  id: string;
+  name: string;
+}
+interface LLMProvider {
+  id: string;
+  name: string;
+  requiresApiKey: boolean;
+  hasApiKey: boolean;
+  status: string;
+  models: LLMModel[];
+}
+interface LLMCatalog {
+  local: LLMModel[];
+  providers: LLMProvider[];
+}
+
+const OCR_OPTIONS = [
+  { value: "", label: "Auto (prefers PaddleOCR-VL)" },
+  { value: "paddle-ocr-vl-1.5", label: "PaddleOCR-VL (Korean/CJK)" },
+  { value: "manga-ocr", label: "Manga OCR (Japanese only)" },
+  { value: "mit48px-ocr", label: "MIT 48px OCR" },
 ];
 
 const SettingsDrawer = ({
@@ -59,11 +75,16 @@ const SettingsDrawer = ({
     setLlmProviderID,
     llmModelID,
     setLlmModelID,
-    llmApiKey,
-    setLlmApiKey,
+    ocrEngine,
+    setOcrEngine,
   } = useContext(SettingsContext);
 
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [catalog, setCatalog] = useState<LLMCatalog | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     curlCommand,
     koharuPath,
@@ -71,38 +92,62 @@ const SettingsDrawer = ({
     llmKind,
     llmProviderID,
     llmModelID,
-    llmApiKey,
+    ocrEngine,
   });
-  const [errorMessage, setErrorMessage] = useState<string>("");
-  const [success, setSuccess] = useState<boolean>(false);
-
-  // LLM model options fetched from Koharu
-  const [localModels, setLocalModels] = useState<{ value: string; label: string }[]>([]);
-  const [providerModels, setProviderModels] = useState<{ value: string; label: string }[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(false);
 
   useEffect(() => {
-    setFormData({ curlCommand, koharuPath, translationPageLimit, llmKind, llmProviderID, llmModelID, llmApiKey });
-  }, [curlCommand, koharuPath, translationPageLimit, llmKind, llmProviderID, llmModelID, llmApiKey]);
+    setFormData({
+      curlCommand,
+      koharuPath,
+      translationPageLimit,
+      llmKind,
+      llmProviderID,
+      llmModelID,
+      ocrEngine,
+    });
+  }, [
+    curlCommand,
+    koharuPath,
+    translationPageLimit,
+    llmKind,
+    llmProviderID,
+    llmModelID,
+    ocrEngine,
+  ]);
 
-  const fetchLLMCatalog = async () => {
+  useEffect(() => {
+    if (settingsOpened) fetchCatalog();
+  }, [settingsOpened]);
+
+  const fetchCatalog = async () => {
     setCatalogLoading(true);
     try {
-      const catalog = await GetLLMCatalog();
-      setLocalModels((catalog.local ?? []).map((m: any) => ({ value: m.id, label: m.name })));
-      setProviderModels((catalog.provider ?? []).map((m: any) => ({ value: m.id, label: m.name })));
-    } catch (e: any) {
-      // Koharu not running yet — that's fine, user can type the model ID
+      const data = (await GetLLMCatalog()) as LLMCatalog;
+      setCatalog(data);
+    } catch {
+      // Koharu not running yet — that's fine
     } finally {
       setCatalogLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (settingsOpened) fetchLLMCatalog();
-  }, [settingsOpened]);
+  // Derived values from catalog
+  const isProvider = formData.llmKind === "provider";
+  const currentProvider =
+    catalog?.providers?.find((p) => p.id === formData.llmProviderID) ?? null;
+  const modelOptions = isProvider
+    ? (currentProvider?.models ?? []).map((m) => ({
+        value: m.id,
+        label: m.name,
+      }))
+    : (catalog?.local ?? []).map((m) => ({ value: m.id, label: m.name }));
 
-  const handleFormSubmit = async (e: React.ChangeEvent<HTMLFormElement>) => {
+  const providerOptions = (catalog?.providers ?? []).map((p) => ({
+    value: p.id,
+    label: p.name,
+  }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -113,7 +158,7 @@ const SettingsDrawer = ({
         formData.llmKind,
         formData.llmProviderID,
         formData.llmModelID,
-        formData.llmApiKey,
+        formData.ocrEngine,
       );
       setToonkorUrl(settings.toonkorUrl);
       setKoharuPath(settings.koharuPath);
@@ -122,50 +167,27 @@ const SettingsDrawer = ({
       setLlmKind(settings.llmKind);
       setLlmProviderID(settings.llmProviderId);
       setLlmModelID(settings.llmModelId);
-      setLlmApiKey(settings.llmApiKey);
+      setOcrEngine(settings.ocrEngine);
       setSuccess(true);
-    } catch (error: any) {
-      setErrorMessage(error.message);
+      setErrorMessage("");
+    } catch (err: any) {
+      setErrorMessage(err.message);
       setSuccess(false);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCurlCommandChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    if (!e.target.value) {
-      setErrorMessage("Curl command cannot be empty");
-      setSuccess(false);
-      return;
-    }
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setErrorMessage("");
-    setSuccess(false);
-  };
-
-  const handleKoharuPathChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setErrorMessage("");
-    setSuccess(false);
-  };
-
-  const handlePageLimitChange = (value: number | string) => {
-    if (typeof value === "string") value = parseInt(value);
-    if (isNaN(value)) { setErrorMessage("Please enter a valid number"); setSuccess(false); return; }
-    if (value < 1 || value > 999) { setErrorMessage("Page limit must be between 1 and 999"); setSuccess(false); return; }
-    setFormData({ ...formData, translationPageLimit: value });
-    setErrorMessage("");
-    setSuccess(false);
-  };
-
   const handleBrowse = async () => {
     const path = await SelectKoharuPath();
-    if (path) setFormData({ ...formData, koharuPath: path });
+    if (path) setFormData((f) => ({ ...f, koharuPath: path }));
   };
 
-  // Derive model options for the current mode
-  const isProvider = formData.llmKind === "provider";
-  const modelOptions = isProvider ? providerModels : localModels;
+  const set = (key: string) => (value: any) => {
+    setFormData((f) => ({ ...f, [key]: value }));
+    setSuccess(false);
+    setErrorMessage("");
+  };
 
   return (
     <Drawer
@@ -177,7 +199,13 @@ const SettingsDrawer = ({
       <div className={classes.stack}>
         <Group justify="space-between">
           <h1 className={classes.title}>Settings</h1>
-          <ActionIcon className={classes.closeButton} onClick={closeSettings} variant="default" size="lg" radius="lg">
+          <ActionIcon
+            className={classes.closeButton}
+            onClick={closeSettings}
+            variant="default"
+            size="lg"
+            radius="lg"
+          >
             <IconX />
           </ActionIcon>
         </Group>
@@ -188,58 +216,74 @@ const SettingsDrawer = ({
             label="Dark Mode"
             labelPosition="left"
             checked={colorScheme === "dark"}
-            onChange={(event) => setColorScheme(event.currentTarget.checked ? "dark" : "light")}
+            onChange={(e) =>
+              setColorScheme(e.currentTarget.checked ? "dark" : "light")
+            }
             classNames={{ track: classes.track }}
           />
           <Switch
             label="Display Manhwa Details in English"
             labelPosition="left"
             checked={displayEnglish}
-            onChange={(event) => setDisplayEnglish(event.currentTarget.checked)}
+            onChange={(e) => setDisplayEnglish(e.currentTarget.checked)}
             classNames={{ track: classes.track }}
           />
         </Stack>
 
         <Divider mt="xl" />
 
-        <form onSubmit={handleFormSubmit}>
+        <form onSubmit={handleSubmit}>
           <h3 className={classes.subTitle}>Toonkor</h3>
           <Textarea
             name="curlCommand"
+            label="Curl Command"
             placeholder="Set curl command"
             value={formData.curlCommand}
-            onChange={handleCurlCommandChange}
+            onChange={(e) => set("curlCommand")(e.target.value)}
             disabled={loading}
             className={classes.input}
             resize="vertical"
-            label="Curl Command"
           />
 
           <Divider mt="xl" />
           <h3 className={classes.subTitle}>Translation</h3>
 
-          <Group style={{ display: "flex", alignItems: "flex-end", gap: "10px" }}>
+          <Group style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
             <div style={{ flexGrow: 1 }}>
               <TextInput
-                name="koharuPath"
-                value={formData.koharuPath}
                 label="Koharu Path"
-                onChange={handleKoharuPathChange}
+                value={formData.koharuPath}
+                onChange={(e) => set("koharuPath")(e.target.value)}
                 disabled={loading}
                 style={{ width: "100%" }}
               />
             </div>
-            <Button onClick={handleBrowse}>Browse</Button>
+            <Button onClick={handleBrowse} disabled={loading}>
+              Browse
+            </Button>
           </Group>
 
           <NumberInput
-            name="translationPageLimit"
+            label="Pages Per Batch (rate limit)"
+            description="Max pages per API call. 0 = no limit."
             value={formData.translationPageLimit}
-            defaultValue={formData.translationPageLimit}
-            label="Pages Per Translation Limit"
-            min={1}
+            min={0}
             max={999}
-            onChange={handlePageLimitChange}
+            onChange={(v) =>
+              set("translationPageLimit")(
+                typeof v === "string" ? parseInt(v) || 0 : v,
+              )
+            }
+            disabled={loading}
+            mt="xs"
+          />
+
+          <Select
+            label="OCR Engine"
+            description="PaddleOCR-VL is recommended for Korean manhwa."
+            value={formData.ocrEngine || ""}
+            onChange={(v) => set("ocrEngine")(v ?? "")}
+            data={OCR_OPTIONS}
             disabled={loading}
             mt="xs"
           />
@@ -247,10 +291,22 @@ const SettingsDrawer = ({
           <Divider mt="xl" />
           <h3 className={classes.subTitle}>LLM</h3>
 
+          {catalogLoading && (
+            <Text size="sm" c="dimmed">
+              Loading models from Koharu…
+            </Text>
+          )}
+
           <Select
             label="LLM Mode"
             value={formData.llmKind}
-            onChange={(v) => setFormData({ ...formData, llmKind: v ?? "provider", llmModelID: "" })}
+            onChange={(v) =>
+              setFormData((f) => ({
+                ...f,
+                llmKind: v ?? "provider",
+                llmModelID: "",
+              }))
+            }
             data={[
               { value: "provider", label: "API Provider" },
               { value: "local", label: "Local Model" },
@@ -260,43 +316,94 @@ const SettingsDrawer = ({
           />
 
           {isProvider && (
-            <Select
-              label="Provider"
-              value={formData.llmProviderID}
-              onChange={(v) => setFormData({ ...formData, llmProviderID: v ?? "openai", llmModelID: "" })}
-              data={PROVIDER_OPTIONS}
-              disabled={loading}
-              mt="xs"
-            />
+            <>
+              {providerOptions.length > 0 ? (
+                <Select
+                  label="Provider"
+                  value={formData.llmProviderID}
+                  onChange={(v) =>
+                    setFormData((f) => ({
+                      ...f,
+                      llmProviderID: v ?? "openai",
+                      llmModelID: "",
+                    }))
+                  }
+                  data={providerOptions.map((p) => {
+                    const prov = catalog?.providers?.find(
+                      (x) => x.id === p.value,
+                    );
+                    return {
+                      value: p.value,
+                      label: prov?.hasApiKey ? `${p.label} ✓` : p.label,
+                    };
+                  })}
+                  disabled={loading}
+                  mt="xs"
+                />
+              ) : (
+                <Select
+                  label="Provider"
+                  value={formData.llmProviderID}
+                  onChange={(v) =>
+                    setFormData((f) => ({
+                      ...f,
+                      llmProviderID: v ?? "openai",
+                      llmModelID: "",
+                    }))
+                  }
+                  data={[
+                    { value: "openai", label: "OpenAI" },
+                    { value: "gemini", label: "Gemini" },
+                    { value: "claude", label: "Anthropic Claude" },
+                    { value: "deepseek", label: "DeepSeek" },
+                    { value: "deepl", label: "DeepL" },
+                    { value: "google-translate", label: "Google Translate" },
+                    { value: "openai-compatible", label: "OpenAI Compatible" },
+                  ]}
+                  disabled={loading}
+                  mt="xs"
+                />
+              )}
+
+              {currentProvider && (
+                <Group mt={4} gap="xs">
+                  <Badge
+                    color={currentProvider.hasApiKey ? "green" : "red"}
+                    size="sm"
+                  >
+                    {currentProvider.hasApiKey
+                      ? "API key configured"
+                      : "No API key"}
+                  </Badge>
+                  {currentProvider.status === "ready" && (
+                    <Badge color="teal" size="sm">
+                      Ready
+                    </Badge>
+                  )}
+                </Group>
+              )}
+            </>
           )}
 
           {modelOptions.length > 0 ? (
             <Select
               label="Model"
               value={formData.llmModelID}
-              onChange={(v) => setFormData({ ...formData, llmModelID: v ?? "" })}
+              onChange={(v) => set("llmModelID")(v ?? "")}
               data={modelOptions}
-              disabled={loading || catalogLoading}
-              placeholder={catalogLoading ? "Loading models…" : "Select a model"}
+              searchable
+              placeholder="Select a model"
+              disabled={loading}
               mt="xs"
             />
           ) : (
             <TextInput
               label="Model ID"
               value={formData.llmModelID}
-              onChange={(e) => setFormData({ ...formData, llmModelID: e.target.value })}
-              placeholder={isProvider ? "e.g. gpt-4o-mini" : "e.g. gguf:llama-3.2-3b"}
-              disabled={loading}
-              mt="xs"
-            />
-          )}
-
-          {isProvider && (
-            <PasswordInput
-              label="API Key"
-              value={formData.llmApiKey}
-              onChange={(e) => setFormData({ ...formData, llmApiKey: e.target.value })}
-              placeholder="sk-..."
+              onChange={(e) => set("llmModelID")(e.target.value)}
+              placeholder={
+                isProvider ? "e.g. gpt-4o-mini" : "e.g. gguf:llama-3.2-3b"
+              }
               disabled={loading}
               mt="xs"
             />
@@ -307,15 +414,23 @@ const SettingsDrawer = ({
             type="submit"
             loading={loading}
             loaderProps={{ type: "dots" }}
-            w={"100%"}
-            disabled={errorMessage !== ""}
+            w="100%"
+            disabled={!!errorMessage}
           >
-            {loading ? "Loading" : "Save"}
+            {loading ? "Saving…" : "Save"}
           </Button>
         </form>
 
-        {success && <Text c="green">Settings saved successfully</Text>}
-        {errorMessage && <Text c="red">{errorMessage}</Text>}
+        {success && (
+          <Text c="green" mt="xs">
+            Settings saved successfully
+          </Text>
+        )}
+        {errorMessage && (
+          <Text c="red" mt="xs">
+            {errorMessage}
+          </Text>
+        )}
       </div>
     </Drawer>
   );

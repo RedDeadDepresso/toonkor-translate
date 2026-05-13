@@ -11,9 +11,9 @@ interface SettingsData {
   llmKind: string;
   llmProviderID: string;
   llmModelID: string;
-  llmApiKey: string;
+  ocrEngine: string;
   read: readData;
-  comicLoading: boolean;
+  koharuLoading: boolean;
   setCurlCommand: (value: string) => void;
   setToonkorUrl: (value: string) => void;
   setKoharuPath: (value: string) => void;
@@ -21,11 +21,11 @@ interface SettingsData {
   setLlmKind: (value: string) => void;
   setLlmProviderID: (value: string) => void;
   setLlmModelID: (value: string) => void;
-  setLlmApiKey: (value: string) => void;
+  setOcrEngine: (value: string) => void;
   setColorScheme: (value: MantineColorScheme) => void;
   setDisplayEnglish: (value: boolean) => void;
   setRead: (value: readData) => void;
-  setComicLoading: (value: boolean) => void;
+  setKoharuLoading: (value: boolean) => void;
 }
 
 export default SettingsData;
