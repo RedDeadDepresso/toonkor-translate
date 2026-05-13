@@ -16,10 +16,6 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-const (
-	koharuPort        = 17173
-	koharuProjectName = "toonkor-translate"
-)
 
 type translator struct {
 	isRunning    bool
@@ -56,24 +52,10 @@ func (t *translator) translateChapters() {
 			Find(&chapters)
 
 		if result.Error != nil {
-			time.Sleep(2 * time.Second)
 			continue
 		}
 		if len(chapters) == 0 {
-			// No work right now — check if there are chapters still downloading
-			// that will need translation once ready.
-			var pending int64
-			database.DB.Model(&models.Chapter{}).
-				Where("translation_status = ? AND download_status = ?", models.Loading, models.Loading).
-				Count(&pending)
-			if pending == 0 {
-				// Nothing in progress either — exit the goroutine.
-				log.Printf("translator: no pending chapters, stopping")
-				break
-			}
-			// Downloads still in flight; wait and check again.
-			time.Sleep(3 * time.Second)
-			continue
+			break
 		}
 
 		chapter := chapters[0]
@@ -110,7 +92,7 @@ func (t *translator) translateChapter(chapter *models.Chapter) error {
 		if settings.KoharuPath == "" {
 			return fmt.Errorf("translator: KoharuPath is not configured")
 		}
-		if err := services.KoharuClient.Start(settings.KoharuPath, koharuPort); err != nil {
+		if err := services.KoharuClient.Start(settings.KoharuPath, services.KoharuPort); err != nil {
 			return fmt.Errorf("translator: could not start Koharu: %w", err)
 		}
 	}
@@ -163,12 +145,7 @@ func (t *translator) translateChapter(chapter *models.Chapter) error {
 		},
 	}
 	if settings.LLMKind == "provider" {
-		llmReq.Target.ProviderID = settings.LLMProviderID
-		if settings.LLMApiKey != "" {
-			if err := services.KoharuClient.SetProviderAPIKey(settings.LLMProviderID, settings.LLMApiKey); err != nil {
-				log.Printf("translator: set provider API key: %v", err)
-			}
-		}
+		llmReq.Target.ProviderID = &settings.LLMProviderID
 	}
 
 	if err := services.KoharuClient.LoadLLM(llmReq); err != nil {
@@ -184,7 +161,7 @@ func (t *translator) translateChapter(chapter *models.Chapter) error {
 	// ----------------------------------------------------------------
 	// 2f. Discover pipeline steps
 	// ----------------------------------------------------------------
-	steps, err := services.KoharuClient.DefaultPipelineSteps()
+	steps, err := services.KoharuClient.DefaultPipelineSteps(settings.OCREngine)
 	if err != nil {
 		return fmt.Errorf("translator: discover pipeline steps: %w", err)
 	}

@@ -37,12 +37,6 @@ type KoharuJobEvent struct {
 	Error string `json:"error,omitempty"`
 }
 
-type KoharuLLMTarget struct {
-	Kind       string `json:"kind"`
-	ProviderID string `json:"providerId,omitempty"`
-	ModelID    string `json:"modelId"`
-}
-
 type KoharuLLMRequest struct {
 	Target  KoharuLLMTarget        `json:"target"`
 	Options map[string]interface{} `json:"options,omitempty"`
@@ -72,6 +66,8 @@ type KoharuClientType struct {
 }
 
 var KoharuClient = &KoharuClientType{}
+
+const KoharuPort = 17173
 
 func (k *KoharuClientType) baseURL() string {
 	return fmt.Sprintf("http://127.0.0.1:%d/api/v1", k.port)
@@ -180,33 +176,51 @@ func (k *KoharuClientType) GetEngines() (KoharuEngineCatalog, error) {
 	return catalog, nil
 }
 
+// preferredEngines lists engine IDs to prefer per stage when multiple are available.
+// manga-ocr is Japanese-only; paddle-ocr-vl supports Korean/Chinese/multilingual.
+var preferredEngines = map[string][]string{
+	"ocr": {"paddle-ocr-vl-1.5", "paddle-ocr-vl", "mit48px-ocr", "manga-ocr"},
+}
+
 // DefaultPipelineSteps queries /engines and builds an ordered slice using the
-// first available engine id for each active pipeline stage:
-// detectors → ocr → translators → inpainters → renderers
-// Stages with no registered engines are skipped.
-func (k *KoharuClientType) DefaultPipelineSteps() ([]string, error) {
+// best available engine id for each active pipeline stage.
+// ocrEngine overrides the OCR engine selection when non-empty.
+func (k *KoharuClientType) DefaultPipelineSteps(ocrEngine string) ([]string, error) {
 	catalog, err := k.GetEngines()
 	if err != nil {
 		return nil, err
 	}
 
 	// Each catalog value is a JSON array of objects with at least an "id" field.
-	// e.g. [{"id":"comic-text-detector","name":"...","produces":[...]}, ...]
-	firstID := func(raw json.RawMessage) string {
+	firstID := func(stage string, raw json.RawMessage) string {
 		var entries []struct {
 			ID string `json:"id"`
 		}
 		if err := json.Unmarshal(raw, &entries); err != nil || len(entries) == 0 {
 			return ""
 		}
+		// Apply explicit override for OCR stage.
+		if stage == "ocr" && ocrEngine != "" {
+			for _, e := range entries {
+				if e.ID == ocrEngine {
+					return e.ID
+				}
+			}
+			log.Printf("koharu: OCR engine %q not available, falling back to auto-select", ocrEngine)
+		}
+		// Check if we have a preferred order for this stage.
+		if prefs, ok := preferredEngines[stage]; ok {
+			for _, pref := range prefs {
+				for _, e := range entries {
+					if e.ID == pref {
+						return e.ID
+					}
+				}
+			}
+		}
 		return entries[0].ID
 	}
 
-	// Ordered stage keys as they appear in the /engines response, paired with
-	// the steps argument name Koharu expects in POST /pipelines.
-	// The pipeline steps use the engine "id" values directly.
-	// Order matters: detector must run before segmenter (BubbleMask),
-	// segmenter before inpainter, ocr+translator before renderer.
 	type stageMapping struct{ catalogKey, pipelineKey string }
 	ordered := []stageMapping{
 		{"detectors", "detector"},
@@ -224,7 +238,7 @@ func (k *KoharuClientType) DefaultPipelineSteps() ([]string, error) {
 			log.Printf("koharu: stage %q not in catalog, skipping", m.catalogKey)
 			continue
 		}
-		id := firstID(raw)
+		id := firstID(m.catalogKey, raw)
 		if id == "" {
 			log.Printf("koharu: stage %q has no engine entries, skipping", m.catalogKey)
 			continue
@@ -408,15 +422,31 @@ func (k *KoharuClientType) fetchPageIDs() ([]KoharuPage, error) {
 // LLM catalog
 // ---------------------------------------------------------------------------
 
+type KoharuLLMTarget struct {
+	Kind       string  `json:"kind"`
+	ModelID    string  `json:"modelId"`
+	ProviderID *string `json:"providerId"`
+}
+
 type KoharuLLMModel struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Family string `json:"family,omitempty"`
+	Target    KoharuLLMTarget `json:"target"`
+	Name      string          `json:"name"`
+	Languages []string        `json:"languages"`
+}
+
+type KoharuLLMProvider struct {
+	ID             string           `json:"id"`
+	Name           string           `json:"name"`
+	RequiresAPIKey bool             `json:"requiresApiKey"`
+	RequiresBaseURL bool            `json:"requiresBaseUrl"`
+	HasAPIKey      bool             `json:"hasApiKey"`
+	Status         string           `json:"status"`
+	Models         []KoharuLLMModel `json:"models"`
 }
 
 type KoharuLLMCatalog struct {
-	Local    []KoharuLLMModel `json:"local"`
-	Provider []KoharuLLMModel `json:"provider"`
+	LocalModels []KoharuLLMModel    `json:"localModels"`
+	Providers   []KoharuLLMProvider `json:"providers"`
 }
 
 // GetLLMCatalog returns available local and provider-backed LLM models.
@@ -430,9 +460,10 @@ func (k *KoharuClientType) GetLLMCatalog() (*KoharuLLMCatalog, error) {
 		b, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("koharu: get llm catalog returned %d: %s", resp.StatusCode, b)
 	}
+	raw, _ := io.ReadAll(resp.Body)
 	var catalog KoharuLLMCatalog
-	if err := json.NewDecoder(resp.Body).Decode(&catalog); err != nil {
-		return nil, err
+	if err := json.Unmarshal(raw, &catalog); err != nil {
+		return nil, fmt.Errorf("koharu: decode llm catalog: %w", err)
 	}
 	return &catalog, nil
 }

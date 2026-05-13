@@ -22,7 +22,7 @@ type Settings struct {
 	// For kind="provider": the provider id (e.g. "openai", "gemini", "claude")
 	LLMProviderID string `json:"llmProviderId"`
 	// API key for the chosen provider (stored in DB for simplicity)
-	LLMApiKey     string `json:"llmApiKey"`
+	OCREngine     string `json:"ocrEngine"`
 }
 
 func koharuDefaultPath() string {

@@ -100,7 +100,7 @@ func (b *Backend) GetSettings() models.Settings {
 	return *settings
 }
 
-func (b *Backend) SetSettings(curlCommand string, koharuPath string, translationPageLimit uint, llmKind string, llmProviderID string, llmModelID string, llmApiKey string) (models.Settings, error) {
+func (b *Backend) SetSettings(curlCommand string, koharuPath string, translationPageLimit uint, llmKind string, llmProviderID string, llmModelID string, ocrEngine string) (models.Settings, error) {
 	if (!services.ToonkorClient.TestCurlCommand(curlCommand)) {
 		err := fmt.Errorf("Invalid curl command")
 		return models.Settings{}, err
@@ -121,7 +121,7 @@ func (b *Backend) SetSettings(curlCommand string, koharuPath string, translation
 			LLMKind:              llmKind,
 			LLMProviderID:        llmProviderID,
 			LLMModelID:           llmModelID,
-			LLMApiKey:            llmApiKey,
+			OCREngine:            ocrEngine,
 		}).
 		FirstOrCreate(&settings)
 	return settings, nil
@@ -132,9 +132,18 @@ type LLMModel struct {
 	Name string `json:"name"`
 }
 
+type LLMProvider struct {
+	ID             string     `json:"id"`
+	Name           string     `json:"name"`
+	RequiresAPIKey bool       `json:"requiresApiKey"`
+	HasAPIKey      bool       `json:"hasApiKey"`
+	Status         string     `json:"status"`
+	Models         []LLMModel `json:"models"`
+}
+
 type LLMCatalog struct {
-	Local    []LLMModel `json:"local"`
-	Provider []LLMModel `json:"provider"`
+	Local     []LLMModel    `json:"local"`
+	Providers []LLMProvider `json:"providers"`
 }
 
 func (b *Backend) GetLLMCatalog() (LLMCatalog, error) {
@@ -151,13 +160,33 @@ func (b *Backend) GetLLMCatalog() (LLMCatalog, error) {
 	if err != nil {
 		return LLMCatalog{}, err
 	}
+
 	result := LLMCatalog{}
-	for _, m := range catalog.Local {
-		result.Local = append(result.Local, LLMModel{ID: m.ID, Name: m.Name})
+
+	for _, m := range catalog.LocalModels {
+		result.Local = append(result.Local, LLMModel{
+			ID:   m.Target.ModelID,
+			Name: m.Name,
+		})
 	}
-	for _, m := range catalog.Provider {
-		result.Provider = append(result.Provider, LLMModel{ID: m.ID, Name: m.Name})
+
+	for _, p := range catalog.Providers {
+		provider := LLMProvider{
+			ID:             p.ID,
+			Name:           p.Name,
+			RequiresAPIKey: p.RequiresAPIKey,
+			HasAPIKey:      p.HasAPIKey,
+			Status:         p.Status,
+		}
+		for _, m := range p.Models {
+			provider.Models = append(provider.Models, LLMModel{
+				ID:   m.Target.ModelID,
+				Name: m.Name,
+			})
+		}
+		result.Providers = append(result.Providers, provider)
 	}
+
 	return result, nil
 }
 
@@ -308,4 +337,18 @@ func (b *Backend) SelectKoharuPath() string {
 
 func (b *Backend) BrowserOpenURL(url string) {
 	browser.OpenURL(url)
+}
+
+func (b *Backend) OpenKoharu() error {
+	settings := models.MainSettings()
+	if settings.KoharuPath == "" {
+		return fmt.Errorf("Koharu path not configured")
+	}
+	if !services.KoharuClient.IsRunning() {
+		if err := services.KoharuClient.Start(settings.KoharuPath, services.KoharuPort); err != nil {
+			return err
+		}
+	}
+	browser.OpenURL(fmt.Sprintf("http://127.0.0.1:%d", 17173))
+	return nil
 }
