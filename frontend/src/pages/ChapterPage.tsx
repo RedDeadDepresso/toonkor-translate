@@ -16,11 +16,11 @@ import classes from "@/pages/ChapterPage.module.css";
 import { NavBar } from "@/components/NavBar/NavBar";
 import MenuLink from "@/components/MenuLinks/MenuLinks";
 import { SettingsContext } from "@/contexts/SettingsContext";
-import { GetChapter } from "../../bindings/toonkor-translate/backend/backend";
 import {
   Chapter,
   ChapterDetails,
 } from "../../bindings/toonkor-translate/backend/models/models";
+import { GetChapter } from "../../bindings/toonkor-translate/backend/backend";
 
 const displayTitle = (data: ChapterDetails, displayEnglish: boolean) => {
   const title =
@@ -41,28 +41,28 @@ const displayTitle = (data: ChapterDetails, displayEnglish: boolean) => {
   );
 };
 
-const paginationButton = (buttonText: string, chapter: Chapter | null) => {
+const PaginationButton = ({ label, chapter }: { label: string; chapter: Chapter | null }) => {
   if (!chapter) {
     return (
       <Button disabled radius="xl">
-        {buttonText}
+        {label}
       </Button>
     );
   }
   return (
     <MenuLink chapter={chapter} position="bottom" newTab={false}>
-      <Button radius="xl">{buttonText}</Button>
+      <Button radius="xl">{label}</Button>
     </MenuLink>
   );
 };
 
-const paginationButtonGroup = (chapterDetails: ChapterDetails) => {
+const PaginationButtonGroup = ({ chapterDetails }: { chapterDetails: ChapterDetails }) => {
   const { prevChapter, currentChapter, nextChapter } = chapterDetails;
   return (
     <Group justify="space-between" my="md">
-      {paginationButton("< Prev", prevChapter)}
-      {paginationButton("Current", currentChapter)}
-      {paginationButton("Next >", nextChapter)}
+      <PaginationButton label="< Prev" chapter={prevChapter} />
+      <PaginationButton label="Current" chapter={currentChapter} />
+      <PaginationButton label="Next >" chapter={nextChapter} />
     </Group>
   );
 };
@@ -120,7 +120,7 @@ const ChapterPage = () => {
         {!loading && data && displayTitle(data, displayEnglish)}
         {loading && <Loader m="auto" color="blue" />}
         <Stack mx="auto" gap={0}>
-          {!loading && data && paginationButtonGroup(data)}
+          {!loading && data && <PaginationButtonGroup chapterDetails={data} />}
           {!loading && error && <Text c="red">{error}</Text>}
           {!loading && data && pages(data.pages)}
           {scroll.y !== 0 && (
@@ -133,7 +133,7 @@ const ChapterPage = () => {
               <IconChevronUp />
             </ActionIcon>
           )}
-          {!loading && data && paginationButtonGroup(data)}
+          {!loading && data && <PaginationButtonGroup chapterDetails={data} />}
         </Stack>
       </Stack>
     </>
