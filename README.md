@@ -1,59 +1,149 @@
-# Welcome to Your New Wails3 Project!
+# Toonkor Translate
 
-Congratulations on generating your Wails3 application! This README will guide you through the next steps to get your project up and running.
+A desktop application for downloading and translating Korean manhwa from Toonkor into English. Built with Wails, Go, and React.
 
-## Getting Started
+Translation is handled by [Koharu](https://github.com/kono-dada/koharu), a local application that runs OCR, inpainting, and LLM-based translation on manga and manhwa pages.
 
-1. Navigate to your project directory in the terminal.
 
-2. To run your application in development mode, use the following command:
+## Features
 
-   ```
-   wails3 dev
-   ```
+- Browse and search manhwa on Toonkor
+- Download chapters for offline reading
+- Translate chapters to English using Koharu
+- Support for local LLM models and API providers (OpenAI, Gemini, Claude, DeepSeek, DeepL, Google Translate)
+- Rate-limited translation batching to stay within API limits
+- Automatic OCR engine selection optimized for Korean text (PaddleOCR-VL)
 
-   This will start your application and enable hot-reloading for both frontend and backend changes.
 
-3. To build your application for production, use:
+## Requirements
 
-   ```
-   wails3 build
-   ```
+- [Koharu](https://github.com/kono-dada/koharu) installed on your machine
+- An LLM configured in Koharu (local model or API provider with key set in Koharu's settings)
+- A valid curl command from Toonkor (used to bypass Cloudflare protection)
 
-   This will create a production-ready executable in the `build` directory.
 
-## Exploring Wails3 Features
+## Installation
 
-Now that you have your project set up, it's time to explore the features that Wails3 offers:
+Download the latest release for your platform from the releases page and run the installer.
 
-1. **Check out the examples**: The best way to learn is by example. Visit the `examples` directory in the `v3/examples` directory to see various sample applications.
+To build from source, see the Development section below.
 
-2. **Run an example**: To run any of the examples, navigate to the example's directory and use:
 
-   ```
-   go run .
-   ```
+## Setup
 
-   Note: Some examples may be under development during the alpha phase.
+### 1. Curl command
 
-3. **Explore the documentation**: Visit the [Wails3 documentation](https://v3.wails.io/) for in-depth guides and API references.
+Toonkor uses Cloudflare protection. To bypass it, you need to export a curl command from your browser after visiting the site.
 
-4. **Join the community**: Have questions or want to share your progress? Join the [Wails Discord](https://discord.gg/JDdSxwjhGf) or visit the [Wails discussions on GitHub](https://github.com/wailsapp/wails/discussions).
+1. Open Toonkor in your browser and complete any Cloudflare challenge
+2. Open DevTools (F12) and go to the Network tab
+3. Find any request to toonkor116.com, right-click it, and select "Copy as cURL"
+4. Paste the curl command into Settings
 
-## Project Structure
+### 2. Koharu path
 
-Take a moment to familiarize yourself with your project structure:
+Point the application to your Koharu executable. Click Browse in Settings to select it, or enter the path manually.
 
-- `frontend/`: Contains your frontend code (HTML, CSS, JavaScript/TypeScript)
-- `main.go`: The entry point of your Go backend
-- `app.go`: Define your application structure and methods here
-- `wails.json`: Configuration file for your Wails project
+The default expected location is:
 
-## Next Steps
+- Windows: `%LOCALAPPDATA%\koharu\koharu.exe`
+- macOS / Linux: `~/.cache/koharu/koharu`
 
-1. Modify the frontend in the `frontend/` directory to create your desired UI.
-2. Add backend functionality in `main.go`.
-3. Use `wails3 dev` to see your changes in real-time.
-4. When ready, build your application with `wails3 build`.
+### 3. LLM configuration
 
-Happy coding with Wails3! If you encounter any issues or have questions, don't hesitate to consult the documentation or reach out to the Wails community.
+API keys for providers are managed inside Koharu, not in this application. To configure a provider:
+
+1. Open Koharu (use the button in the top navigation bar)
+2. Go to Settings inside Koharu
+3. Navigate to Providers and enter your API key for the provider you want to use
+
+Once the key is set in Koharu, return to this application's Settings and select your provider and model from the dropdowns.
+
+### 4. OCR engine
+
+The default OCR engine is PaddleOCR-VL, which produces accurate results for Korean manhwa. Manga OCR is Japanese-only and should not be used for Korean content. You can change the engine in Settings if needed.
+
+
+## Usage
+
+### Browsing and downloading
+
+1. Go to Browse and search for a manhwa by name
+2. Click a result to open its page
+3. Use the download button on individual chapters or bulk-download from the chapter list
+4. Downloaded chapters appear in your Library
+
+### Translating
+
+1. Open a manhwa and select chapters to translate
+2. Click the translate button
+3. The application will start Koharu in the background, upload the pages, run the full pipeline (text detection, bubble segmentation, OCR, LLM translation, inpainting, rendering), and save the translated images
+4. Translated chapters are shown with a separate reader
+
+### Translation batching
+
+If you are using an API provider with rate limits, set the "Pages Per Batch" value in Settings. The application will process that many pages per pipeline job and wait 60 seconds between batches. Set it to 0 to process all pages in a single job.
+
+
+## Settings reference
+
+| Setting | Description |
+|---|---|
+| Curl Command | Browser curl export used to authenticate requests to Toonkor |
+| Koharu Path | Path to the Koharu executable |
+| Pages Per Batch | Number of pages per translation job. 0 means no limit |
+| OCR Engine | Engine used to read text from pages. PaddleOCR-VL is recommended for Korean |
+| LLM Mode | Whether to use a local model or an API provider |
+| Provider | API provider to use for translation |
+| Model | Specific model within the chosen provider or local catalog |
+
+
+## Data storage
+
+Application data is stored in the platform config directory:
+
+- Windows: `%APPDATA%\ToonkorTranslate`
+- macOS: `~/Library/Application Support/ToonkorTranslate`
+- Linux: `~/.config/ToonkorTranslate`
+
+Downloaded pages and translated images are stored under a `media` subdirectory within this folder.
+
+
+## Development
+
+### Prerequisites
+
+- Go 1.25 or later
+- Node.js 18 or later
+- [Wails v3](https://v3.wails.io) CLI
+
+### Running in development mode
+
+```
+wails3 dev
+```
+
+### Building
+
+```
+wails3 build
+```
+
+### Project structure
+
+```
+backend/
+  backend.go          main backend entrypoint and Wails bindings
+  database/           SQLite initialization and migrations
+  models/             GORM models (Manhwa, Chapter, Settings)
+  pipeline/           background workers (downloader, translator, cleaner)
+  services/           HTTP clients (Toonkor scraper, Koharu API)
+  utils/              shared helpers
+
+frontend/
+  src/
+    components/       React components (NavBar, SettingsDrawer, etc.)
+    contexts/         React context providers
+    types/            TypeScript type definitions
+    pages/            route-level page components
+```
