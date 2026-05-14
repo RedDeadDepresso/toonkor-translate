@@ -67,12 +67,12 @@ func (t *translator) translateChapters() {
 		err := t.translateChapter(&chapter)
 		if err != nil {
 			log.Printf("translator: chapter %s failed: %v", chapter.ToonkorID, err)
-			database.DB.Model(&models.Chapter{}).
+			database.DB.Model(&chapter).
 				Where("id = ?", chapter.ID).
 				Update("translation_status", models.NotReady)
 		} else {
 			log.Printf("translator: chapter %s succeeded, marking Ready", chapter.ToonkorID)
-			database.DB.Model(&models.Chapter{}).
+			database.DB.Model(&chapter).
 				Where("id = ?", chapter.ID).
 				Update("translation_status", models.Ready)
 		}

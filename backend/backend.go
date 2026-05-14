@@ -190,7 +190,7 @@ func (b *Backend) GetLLMCatalog() (LLMCatalog, error) {
 	return result, nil
 }
 
-func (b *Backend) DownloadChapters(chapters []models.Chapter, translation bool) ([]models.Chapter, bool) {
+func (b *Backend) DownloadChapters(chapters []models.Chapter, translate bool) ([]models.Chapter, bool) {
 	var toonkorIDs []string
 	for _, c := range chapters {
 		toonkorIDs = append(toonkorIDs, c.ToonkorID)
@@ -202,7 +202,7 @@ func (b *Backend) DownloadChapters(chapters []models.Chapter, translation bool) 
 		"updated_at":      time.Now(),
 	}
 
-	if translation {
+	if translate {
 		fields["translation_status"] = models.Loading
 	}
 
@@ -229,7 +229,7 @@ func (b *Backend) DownloadChapters(chapters []models.Chapter, translation bool) 
 	return updatedChapters, true
 }
 
-func (b *Backend) DeleteChapters(chapters []models.Chapter, translation bool) ([]models.Chapter, bool) {
+func (b *Backend) DeleteChapters(chapters []models.Chapter, downloaded bool, translated bool) ([]models.Chapter, bool) {
 	var toonkorIDs []string
 	for _, c := range chapters {
 		toonkorIDs = append(toonkorIDs, c.ToonkorID)
@@ -237,11 +237,14 @@ func (b *Backend) DeleteChapters(chapters []models.Chapter, translation bool) ([
 
 	// 1. Prepare the fields for update
 	fields := map[string]interface{}{
-		"download_status": models.Removing,
 		"updated_at":      time.Now(),
 	}
 
-	if translation {
+	if downloaded {
+		fields["download_status"] = models.Removing
+	}
+
+	if translated {
 		fields["translation_status"] = models.Removing
 	}
 

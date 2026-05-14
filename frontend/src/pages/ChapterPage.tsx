@@ -1,4 +1,4 @@
-import { useFetch, useWindowScroll } from "@mantine/hooks";
+import { useWindowScroll } from "@mantine/hooks";
 import { useParams, Link } from "react-router-dom";
 import {
   Stack,
@@ -17,7 +17,10 @@ import { NavBar } from "@/components/NavBar/NavBar";
 import MenuLink from "@/components/MenuLinks/MenuLinks";
 import { SettingsContext } from "@/contexts/SettingsContext";
 import { GetChapter } from "../../bindings/toonkor-translate/backend/backend";
-import { Chapter, ChapterDetails } from "../../bindings/toonkor-translate/backend/models/models";
+import {
+  Chapter,
+  ChapterDetails,
+} from "../../bindings/toonkor-translate/backend/models/models";
 
 const displayTitle = (data: ChapterDetails, displayEnglish: boolean) => {
   const title =
@@ -84,7 +87,6 @@ const ChapterPage = () => {
         setLoading(true);
         const chapterDetails = await GetChapter(toonkorId, choice);
         setData(chapterDetails);
-        console.log(chapterDetails);
         setLoading(false);
       } catch (e) {
         setError("error");

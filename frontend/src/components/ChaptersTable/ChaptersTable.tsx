@@ -135,10 +135,10 @@ const ChaptersTable = ({
     setChapters(updatedChapterList);
   };
 
-  const submitDownloadChapters = async (translation: boolean = false) => {
+  const submitDownloadChapters = async (translate: boolean = false) => {
     const [updatedChapters, success] = await DownloadChapters(
       selection,
-      translation,
+      translate,
     );
     if (success) updateChapters(updatedChapters);
   };
@@ -148,6 +148,7 @@ const ChaptersTable = ({
     if (!removeSelection) return;
     const [updatedChapters, success] = await DeleteChapters(
       removeSelection,
+      removeChoices.downloaded,
       removeChoices.translated,
     );
     if (success) updateChapters(updatedChapters);
