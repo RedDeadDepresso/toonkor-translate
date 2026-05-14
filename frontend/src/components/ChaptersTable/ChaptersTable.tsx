@@ -1,5 +1,5 @@
 import cx from "clsx";
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import {
   Table,
   Checkbox,
@@ -41,6 +41,8 @@ const ChaptersTable = ({
   toonkorId = "",
   initialChapters = [],
 }: ChaptersTableProps) => {
+  // allChapters holds the complete unfiltered list at all times.
+  const allChapters = useRef<Chapter[]>(initialChapters);
   const [chapters, setChapters] = useState<Chapter[]>(initialChapters);
   const [selection, setSelection] = useState<Chapter[]>([]);
   const [filters, setFilters] = useState({
@@ -55,68 +57,55 @@ const ChaptersTable = ({
   const { openLocalURL, openToonkorURL } = useOpenURL();
 
   useEffect(() => {
-    // 1. Listen for the event (using the ID you emitted from Go)
     const unsubscribe = Events.On(toonkorId, (event) => {
       const incomingChapter = event.data;
-      // 2. Use a functional update to avoid stale state issues
-      setChapters((prevChapters) => {
-        // Create a shallow copy of the array
-        const updatedList = [...prevChapters];
+      const chapterIndex = incomingChapter.index;
 
-        // Find the index (using your logic)
-        const chapterIndex = incomingChapter.index;
+      // Update the source-of-truth ref.
+      if (allChapters.current[chapterIndex]) {
+        allChapters.current = allChapters.current.map((ch, i) =>
+          i === chapterIndex
+            ? { ...ch, downloadStatus: incomingChapter.downloadStatus, translationStatus: incomingChapter.translationStatus }
+            : ch
+        );
+      }
 
-        // 3. Safety check: Ensure the index exists in your current list
-        if (updatedList[chapterIndex]) {
-          // Update the fields
-          updatedList[chapterIndex] = {
-            ...updatedList[chapterIndex],
-            downloadStatus: incomingChapter.downloadStatus,
-            translationStatus: incomingChapter.translationStatus,
-          };
-        }
-
-        return updatedList;
-      });
+      // Re-apply the current filters against the updated full list.
+      setChapters(applyFiltersTo(allChapters.current, filters));
     });
 
-    // 4. Cleanup
     return () => unsubscribe();
-  }, [toonkorId]);
+  }, [toonkorId, filters]);
 
   useEffect(() => {
-    applyFilters();
+    setChapters(applyFiltersTo(allChapters.current, filters));
   }, [filters]);
 
-  const applyFilters = () => {
-    if (filters.downloaded && filters.translated) {
-      setChapters(
-        chapters.filter(
-          (chapter) =>
-            chapter.downloadStatus === Status.Ready &&
-            chapter.translationStatus === Status.Ready,
-        ),
-      );
-    } else if (!filters.downloaded && !filters.translated) {
-      setChapters(chapters);
-    } else if (filters.downloaded) {
-      setChapters(
-        chapters.filter((chapter) => chapter.downloadStatus === Status.Ready),
-      );
-    } else if (filters.translated) {
-      setChapters(
-        chapters.filter(
-          (chapter) => chapter.translationStatus === Status.Ready,
-        ),
+  const applyFiltersTo = (
+    source: Chapter[],
+    f: { downloaded: boolean; translated: boolean }
+  ): Chapter[] => {
+    if (f.downloaded && f.translated) {
+      return source.filter(
+        (ch) =>
+          ch.downloadStatus === Status.Ready &&
+          ch.translationStatus === Status.Ready
       );
     }
+    if (f.downloaded) {
+      return source.filter((ch) => ch.downloadStatus === Status.Ready);
+    }
+    if (f.translated) {
+      return source.filter((ch) => ch.translationStatus === Status.Ready);
+    }
+    return source;
   };
 
   const toggleRow = (chapter: Chapter) => {
     setSelection((prevSelection) =>
       prevSelection.includes(chapter)
         ? prevSelection.filter((item) => item.index !== chapter.index)
-        : [...prevSelection, chapter],
+        : [...prevSelection, chapter]
     );
   };
 
@@ -126,13 +115,16 @@ const ChaptersTable = ({
 
   const updateChapters = (updatedChapters: Chapter[]) => {
     for (const chapter of updatedChapters) {
-      const chapterIndex = chapter.index;
-      chapters[chapterIndex].downloadStatus = chapter.downloadStatus;
-      chapters[chapterIndex].translationStatus = chapter.translationStatus;
+      const idx = chapter.index;
+      if (allChapters.current[idx]) {
+        allChapters.current = allChapters.current.map((ch, i) =>
+          i === idx
+            ? { ...ch, downloadStatus: chapter.downloadStatus, translationStatus: chapter.translationStatus }
+            : ch
+        );
+      }
     }
-
-    const updatedChapterList = [...chapters];
-    setChapters(updatedChapterList);
+    setChapters(applyFiltersTo(allChapters.current, filters));
   };
 
   const submitDownloadChapters = async (translate: boolean = false) => {
