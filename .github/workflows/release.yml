@@ -43,7 +43,11 @@ jobs:
           version: 3.x
 
       - name: Install Wails
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+        shell: pwsh
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          $gopath = go env GOPATH
+          echo "$gopath\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install frontend dependencies
         working-directory: frontend
