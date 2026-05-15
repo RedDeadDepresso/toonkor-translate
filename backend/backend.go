@@ -355,3 +355,22 @@ func (b *Backend) OpenKoharu() error {
 	browser.OpenURL(fmt.Sprintf("http://127.0.0.1:%d", 17173))
 	return nil
 }
+
+func (b *Backend) CheckForUpdate() (*services.UpdateInfo, error) {
+	return services.CheckForUpdate()
+}
+ 
+func (b *Backend) DownloadAndInstallUpdate() error {
+	return services.DownloadAndInstallUpdate(
+		func(percent int) {
+			if b.app != nil {
+				b.app.Event.Emit("update:progress", percent)
+			}
+		},
+		func() {
+			if b.app != nil {
+				b.app.Quit()
+			}
+		},
+	)
+}
