@@ -76,5 +76,5 @@ jobs:
           prerelease: ${{ contains(steps.tag.outputs.tag, '-') }}
           files: |
             bin/toonkor-translate.exe
-            build/windows/nsis/toonkor-translate-installer.exe
+            bin/toonkor-translate-amd64-installer.exe
           generate_release_notes: true
