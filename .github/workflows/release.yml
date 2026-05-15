@@ -21,6 +21,11 @@ jobs:
         shell: bash
         run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+      - name: Get version without v prefix
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
       - name: Set up Go 1.25
         shell: pwsh
         run: |
@@ -56,14 +61,20 @@ jobs:
       - name: Download Go dependencies
         run: go mod download
 
-      - name: Build
-        shell: bash
+      - name: Update version in info.json
+        shell: pwsh
         run: |
-          VERSION="${{ steps.tag.outputs.tag }}"
-          task windows:build \
-            BUILD_FLAGS="-tags production -trimpath -buildvcs=false -ldflags=\"-w -s -H windowsgui -X toonkor-translate/backend/services.Version=${VERSION}\""
+          $version = "${{ steps.version.outputs.version }}"
+          $info = Get-Content build/windows/info.json | ConvertFrom-Json
+          $info.fixed.file_version = $version
+          $info.info."0000".ProductVersion = $version
+          $info | ConvertTo-Json -Depth 10 | Set-Content build/windows/info.json
+
+      - name: Build
+        run: task windows:build
         env:
           CGO_ENABLED: 0
+          GOFLAGS: -ldflags=-X=toonkor-translate/backend/services.Version=${{ steps.tag.outputs.tag }}
 
       - name: Install NSIS
         shell: pwsh
