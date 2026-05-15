@@ -23,11 +23,13 @@ const useOpenURL = () => {
     newTab: boolean,
   ) => {
     const chapterUrl = `/chapter/${chapterId}/${choice}`;
+
     setRead({ ...read, [chapterId]: true });
+
     if (newTab) {
-      window.open(chapterUrl, '_blank', 'noreferrer');
+      window.open(chapterUrl, "_blank", "noreferrer");
     } else {
-      navigate(chapterUrl);
+      setTimeout(() => navigate(chapterUrl), 0);
     }
   };
 

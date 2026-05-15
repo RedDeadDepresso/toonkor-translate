@@ -41,7 +41,13 @@ const displayTitle = (data: ChapterDetails, displayEnglish: boolean) => {
   );
 };
 
-const PaginationButton = ({ label, chapter }: { label: string; chapter: Chapter | null }) => {
+const PaginationButton = ({
+  label,
+  chapter,
+}: {
+  label: string;
+  chapter: Chapter | null;
+}) => {
   if (!chapter) {
     return (
       <Button disabled radius="xl">
@@ -50,13 +56,17 @@ const PaginationButton = ({ label, chapter }: { label: string; chapter: Chapter 
     );
   }
   return (
-    <MenuLink chapter={chapter} position="bottom" newTab={false}>
+    <MenuLink chapter={chapter} position="bottom">
       <Button radius="xl">{label}</Button>
     </MenuLink>
   );
 };
 
-const PaginationButtonGroup = ({ chapterDetails }: { chapterDetails: ChapterDetails }) => {
+const PaginationButtonGroup = ({
+  chapterDetails,
+}: {
+  chapterDetails: ChapterDetails;
+}) => {
   const { prevChapter, currentChapter, nextChapter } = chapterDetails;
   return (
     <Group justify="space-between" my="md">
@@ -96,7 +106,7 @@ const ChapterPage = () => {
 
   useEffect(() => {
     fetchChapterDetail();
-  }, []);
+  }, [toonkorId, choice]);
 
   // Toggle navbar visibility when clicking outside buttons/anchors
   useEffect(() => {

@@ -11,7 +11,6 @@ interface MenuLinkProps {
   children: ReactNode;
   chapter: Chapter;
   position: FloatingPosition | undefined;
-  newTab?: boolean;
 }
 
 const MenuLink = ({ children, chapter, position }: MenuLinkProps) => {
