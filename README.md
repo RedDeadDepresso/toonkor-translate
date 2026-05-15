@@ -2,7 +2,7 @@
 
 A desktop application for downloading and translating Korean manhwa from Toonkor into English. Built with Wails, Go, and React.
 
-Translation is handled by [Koharu](https://github.com/kono-dada/koharu), a local application that runs OCR, inpainting, and LLM-based translation on manga and manhwa pages.
+Translation is handled by [Koharu](https://github.com/mayocream/koharu), a local application that runs OCR, inpainting, and LLM-based translation on manga and manhwa pages.
 
 
 ## Features
@@ -17,7 +17,7 @@ Translation is handled by [Koharu](https://github.com/kono-dada/koharu), a local
 
 ## Requirements
 
-- [Koharu](https://github.com/kono-dada/koharu) installed on your machine
+- [Koharu](https://github.com/mayocream/koharu) installed on your machine
 - An LLM configured in Koharu (local model or API provider with key set in Koharu's settings)
 - A valid curl command from Toonkor (used to bypass Cloudflare protection)
 
