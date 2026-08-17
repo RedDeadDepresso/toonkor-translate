@@ -92,8 +92,7 @@ func (k *KoharuClientType) Start(exePath string, port int) error {
 		"--headless",
 		"--port", fmt.Sprintf("%d", port),
 	)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	hideWindow(cmd)
 
 	if err := cmd.Start(); err != nil {
 		cancel()
