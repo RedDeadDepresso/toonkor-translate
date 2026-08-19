@@ -114,14 +114,13 @@ func (m *mangaDexClient) extractResponse(
 		koreanTitle := ""
 		enTitle := ""
 
+		// Scan all altTitles independently — "ko" and "en" are in separate objects.
 		for _, altTitle := range result.Attributes.AltTitles {
-
-			if ko, exists := altTitle["ko"]; exists {
+			if ko, exists := altTitle["ko"]; exists && koreanTitle == "" {
 				koreanTitle = ko
-				if en, exists := altTitle["en"]; exists {
-					enTitle = en
 			}
-				break
+			if en, exists := altTitle["en"]; exists && enTitle == "" {
+				enTitle = en
 			}
 		}
 
@@ -129,7 +128,8 @@ func (m *mangaDexClient) extractResponse(
 			continue
 		}
 
-		if (result.Attributes.Title["en"] != "") {
+		// attributes.title["en"] takes priority over altTitles if present.
+		if result.Attributes.Title["en"] != "" {
 			enTitle = result.Attributes.Title["en"]
 		}
 
