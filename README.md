@@ -1,5 +1,7 @@
 # Toonkor Translate
 
+<img width="2560" height="1528" alt="Screenshot 2026-08-21 144604" src="https://github.com/user-attachments/assets/6bae27b5-0ac1-4e51-a097-ee08ba38e7b8" />
+
 A desktop application for downloading and translating Korean manhwa from Toonkor into English. Built with Wails, Go, and React.
 
 Translation is handled by [Koharu](https://github.com/mayocream/koharu), a local application that runs OCR, inpainting, and LLM-based translation on manga and manhwa pages.
